@@ -83,15 +83,15 @@ source %v
 `, source)
 
 	expected := [][]string{
-		[]string{"3", "key value"},
-		[]string{"5", "key value1 value2"},
-		[]string{"9", "another−€¡ Hé€ Well..."},
-		[]string{"11", "collapse many whitespaces"},
-		[]string{"13", "ig#nore comments # like this"},
-		[]string{"15", "uni-code white space"},
-		[]string{"16", "pre_serve  spaces   like 		so"},
-		[]string{"18", `back s\lash`},
-		[]string{"1", "sourced file"},
+		{"3", "key value"},
+		{"5", "key value1 value2"},
+		{"9", "another−€¡ Hé€ Well..."},
+		{"11", "collapse many whitespaces"},
+		{"13", "ig#nore comments # like this"},
+		{"15", "uni-code white space"},
+		{"16", "pre_serve  spaces   like 		so"},
+		{"18", `back s\lash`},
+		{"1", "sourced file"},
 	}
 
 	out, err := readFile(testfile(t, test))
