@@ -157,7 +157,7 @@ The syntax of the file is very simple.
 
 Programs using it
 =================
-- [dnsblock][dnsblock]
+- [trackwall][trackwall]
 
 Alternatives
 ============
@@ -167,4 +167,4 @@ Aside from those mentioned in the "But why not..." section above:
 
 [json-no]: http://arp242.net/weblog/JSON_as_configuration_files-_please_dont.html
 [yaml-meh]: http://arp242.net/weblog/yaml_probably_not_so_great_after_all.html
-[dnsblock]: http://code.arp242.net/dnsblock
+[trackwall]: http://code.arp242.net/trackwall
