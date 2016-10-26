@@ -155,11 +155,6 @@ The syntax of the file is very simple.
 - All Lines that start with one or more Whitespace characters will be appended
   to the last Value.
 
-<!--
-### Processing it into a struct
-- TODO: Document how this works in more detail.
--->
-
 Programs using it
 =================
 - [dnsblock][dnsblock]
@@ -171,5 +166,5 @@ Aside from those mentioned in the "But why not..." section above:
 - [https://github.com/kovetskiy/ko](https://github.com/kovetskiy/ko)
 
 [json-no]: http://arp242.net/weblog/JSON_as_configuration_files-_please_dont.html
-[yaml-meh]: http://arp242.net/weblog/yaml-_probably_not_so_great_after_all.markdown
+[yaml-meh]: http://arp242.net/weblog/yaml_probably_not_so_great_after_all.html
 [dnsblock]: http://code.arp242.net/dnsblock
