@@ -31,7 +31,7 @@ Can be parsed with:
 		"fmt"
 		"os"
 
-		"code.arp242.net/sconfig"
+		"bitbucket.org/Carpetsmoker/sconfig"
 	)
 
 	type Config struct {
