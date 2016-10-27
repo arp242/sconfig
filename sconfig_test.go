@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -251,6 +250,22 @@ func TestInvalidPrimitives(t *testing.T) {
 		"Bool what?":                 `line 1: error parsing Bool: unable to parse "what?" as a boolean`,
 		"woot field":                 `line 1: error parsing woot: unknown option (field Woot or Woots is missing)`,
 		"\n\n\n\ntime-type 2016\n\n": `line 5: error parsing time-type: don't know how to set fields of the type time.Time`,
+
+		"float32 42,42": `invalid syntax`,
+		"float64 42,42": `invalid syntax`,
+
+		"int nope":    `invalid syntax`,
+		"int8 nope":   `invalid syntax`,
+		"int16 nope":  `invalid syntax`,
+		"int32 nope":  `invalid syntax`,
+		"int64 nope":  `invalid syntax`,
+		"uint nope":   `invalid syntax`,
+		"uint8 nope":  `invalid syntax`,
+		"uint16 nope": `invalid syntax`,
+		"uint32 nope": `invalid syntax`,
+		"uint64 nope": `invalid syntax`,
+
+		//"int 32 64": `TODO`,
 	}
 
 	for test, expected := range tests {
@@ -261,6 +276,7 @@ func TestInvalidPrimitives(t *testing.T) {
 		err := Parse(&out, f, nil)
 		if err == nil {
 			t.Error("got to have an error")
+			t.FailNow()
 		}
 		if !strings.HasSuffix(err.Error(), expected) {
 			t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
@@ -329,20 +345,21 @@ func TestParseHandlers(t *testing.T) {
 }
 
 type testArray struct {
-	Str     []string
-	Int     []int
-	Int8    []int8
-	Int16   []int16
-	Int32   []int32
-	Int64   []int64
-	UInt    []uint
-	UInt8   []uint8
-	UInt16  []uint16
-	UInt32  []uint32
-	UInt64  []uint64
-	Bool    []bool
-	Float32 []float32
-	Float64 []float64
+	Str      []string
+	Int      []int
+	Int8     []int8
+	Int16    []int16
+	Int32    []int32
+	Int64    []int64
+	UInt     []uint
+	UInt8    []uint8
+	UInt16   []uint16
+	UInt32   []uint32
+	UInt64   []uint64
+	Bool     []bool
+	Float32  []float32
+	Float64  []float64
+	TimeType []time.Time
 }
 
 func TestParseArray(t *testing.T) {
@@ -355,7 +372,7 @@ int16 44 668
 int32 45 669
 int64 46 700
 
-uint 47 701
+uint 47 71
 uint8 48 101
 uint16 49 703
 uint32 50 704
@@ -374,7 +391,7 @@ float64 3.14159 1.2
 		Int16:   []int16{44, 668},
 		Int32:   []int32{45, 669},
 		Int64:   []int64{46, 700},
-		UInt:    []uint{47, 701},
+		UInt:    []uint{47, 71},
 		UInt8:   []uint8{48, 101},
 		UInt16:  []uint16{49, 703},
 		UInt32:  []uint32{50, 704},
@@ -396,6 +413,47 @@ float64 3.14159 1.2
 	}
 }
 
+func TestInvalidArray(t *testing.T) {
+	tests := map[string]string{
+		"\n\nInt false":              `line 3: error parsing Int: strconv.ParseInt: parsing "false": invalid syntax`,
+		"Bool what?":                 `line 1: error parsing Bool: unable to parse "what?" as a boolean`,
+		"woot field":                 `line 1: error parsing woot: unknown option (field Woot or Woots is missing)`,
+		"\n\n\n\ntime-type 2016\n\n": `line 5: error parsing time-type: don't know how to set fields of the type []time.Time`,
+
+		"float32 42,42": `invalid syntax`,
+		"float64 42,42": `invalid syntax`,
+
+		"int nope":    `invalid syntax`,
+		"int8 nope":   `invalid syntax`,
+		"int16 nope":  `invalid syntax`,
+		"int32 nope":  `invalid syntax`,
+		"int64 nope":  `invalid syntax`,
+		"uint nope":   `invalid syntax`,
+		"uint8 nope":  `invalid syntax`,
+		"uint16 nope": `invalid syntax`,
+		"uint32 nope": `invalid syntax`,
+		"uint64 nope": `invalid syntax`,
+
+		//"int 32 64": `TODO`,
+	}
+
+	for test, expected := range tests {
+		f := testfile(test)
+		defer os.Remove(f)
+
+		out := testArray{}
+		err := Parse(&out, f, nil)
+		if err == nil {
+			t.Error("got to have an error")
+			t.FailNow()
+		}
+		if !strings.HasSuffix(err.Error(), expected) {
+			t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
+		}
+	}
+
+}
+
 type testTypeHandlers struct {
 	Str  string
 	Reg  *regexp.Regexp
@@ -403,18 +461,20 @@ type testTypeHandlers struct {
 }
 
 func TestParseTypeHandlers(t *testing.T) {
-	TypeHandlers["string"] = func(field *reflect.Value, v []string) interface{} {
-		return "type handler"
+	defer defaultTypeHandlers()
+
+	TypeHandlers["string"] = func(v []string) (interface{}, error) {
+		return "type handler", nil
 	}
-	TypeHandlers["*regexp.Regexp"] = func(field *reflect.Value, v []string) interface{} {
-		return regexp.MustCompile(v[0])
+	TypeHandlers["*regexp.Regexp"] = func(v []string) (interface{}, error) {
+		return regexp.MustCompile(v[0]), nil
 	}
-	TypeHandlers["[]*regexp.Regexp"] = func(field *reflect.Value, v []string) interface{} {
+	TypeHandlers["[]*regexp.Regexp"] = func(v []string) (interface{}, error) {
 		r := []*regexp.Regexp{}
 		for _, s := range v {
 			r = append(r, regexp.MustCompile(s))
 		}
-		return r
+		return r, nil
 	}
 
 	test := `
@@ -448,6 +508,26 @@ regs bar.* [hH]
 	if out.Regs[1].String() != "[hH]" {
 		t.Error()
 	}
+
+	// Just in case...
+	delete(TypeHandlers, "string")
+	err = Parse(&out, f, nil)
+	if err == nil {
+		t.Error("expected an error")
+		t.FailNow()
+	}
+	if !strings.HasSuffix(err.Error(), "don't know how to set fields of the type string") {
+		t.Error("wrong error")
+	}
+
+	f2 := testfile("# Hello\n")
+	defer os.Remove(f2)
+
+	TypeHandlers = nil
+	err = Parse(&out, f2, nil)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestExample(t *testing.T) {
@@ -479,12 +559,16 @@ host  # Multiline stuff
 	}
 
 	config := Config{}
-	TypeHandlers["[]*regexp.Regexp"] = func(field *reflect.Value, v []string) interface{} {
-		r := []*regexp.Regexp{}
-		for _, s := range v {
-			r = append(r, regexp.MustCompile(s))
+	TypeHandlers["[]*regexp.Regexp"] = func(v []string) (interface{}, error) {
+		a := make([]*regexp.Regexp, len(v))
+		for i := range v {
+			r, err := regexp.Compile(v[i])
+			if err != nil {
+				return nil, err
+			}
+			a[i] = r
 		}
-		return r
+		return a, nil
 	}
 
 	f := testfile(test)

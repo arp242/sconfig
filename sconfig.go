@@ -22,7 +22,7 @@ var TypeHandlers = make(map[string]TypeHandler)
 
 // TypeHandler takes the field to set and the value to set it to. It is expected
 // to return the value to set it to.
-type TypeHandler func(*reflect.Value, []string) interface{}
+type TypeHandler func([]string) (interface{}, error)
 
 // Handler functions can be used to run special code for a field. The function
 // takes the unprocessed line split by whitespace and with the option name
@@ -32,6 +32,48 @@ type Handler func([]string) error
 // Handlers can be used to run special code for a field. The map key is the name
 // of the field in the struct.
 type Handlers map[string]Handler
+
+func init() {
+	defaultTypeHandlers()
+}
+
+func defaultTypeHandlers() {
+	TypeHandlers = map[string]TypeHandler{
+		// TODO: Parameters after the first are now all just ignored; should be
+		// an error
+		"string":  handleString,
+		"bool":    handleBool,
+		"float32": handleFloat32,
+		"float64": handleFloat64,
+		"int":     handleInt,
+		"int8":    handleInt8,
+		"int16":   handleInt16,
+		"int32":   handleInt32,
+		"int64":   handleInt64,
+		"uint":    handleUint,
+		"uint8":   handleUint8,
+		"uint16":  handleUint16,
+		"uint32":  handleUint32,
+		"uint64":  handleUint64,
+
+		"[]string":  handleStringSlice,
+		"[]bool":    handleBoolSlice,
+		"[]float32": handleFloat32Slice,
+		"[]float64": handleFloat64Slice,
+
+		"[]int":   handleIntSlice,
+		"[]int8":  handleInt8Slice,
+		"[]int16": handleInt16Slice,
+		"[]int32": handleInt32Slice,
+		"[]int64": handleInt64Slice,
+
+		"[]uint":   handleUintSlice,
+		"[]uint8":  handleUint8Slice,
+		"[]uint16": handleUint16Slice,
+		"[]uint32": handleUint32Slice,
+		"[]uint64": handleUint64Slice,
+	}
+}
 
 // readFile will read a file, strip comments, and collapse indents. This also
 // deals with the special "source" command.
@@ -191,18 +233,25 @@ func Parse(c interface{}, file string, handlers Handlers) error {
 		field := values.FieldByName(fieldName)
 
 		// Use the handler if it exists
-		if has, err := getHandler(fieldName, v[1:], handlers); has {
+		if has, err := setFromHandler(fieldName, v[1:], handlers); has {
 			if err != nil {
 				return fmterr(file, line[0], v[0], err)
 			}
 			continue
 		}
 
-		// Regular value
-		err = setValue(&field, v[1:])
-		if err != nil {
-			return fmterr(file, line[0], v[0], err)
+		// Set from typehandler
+		if has, err := setFromTypeHandler(&field, v[1:]); has {
+			if err != nil {
+				return fmterr(file, line[0], v[0], err)
+			}
+			continue
 		}
+
+		// Give up :-(
+		return fmterr(file, line[0], v[0], fmt.Errorf(
+			"don't know how to set fields of the type %s",
+			field.Type().String()))
 	}
 
 	return nil
@@ -242,7 +291,7 @@ func fieldNameFromKey(key string, values reflect.Value) (string, error) {
 	return fieldName, nil
 }
 
-func getHandler(fieldName string, values []string, handlers Handlers) (bool, error) {
+func setFromHandler(fieldName string, values []string, handlers Handlers) (bool, error) {
 	if handlers == nil {
 		return false, nil
 	}
@@ -260,177 +309,18 @@ func getHandler(fieldName string, values []string, handlers Handlers) (bool, err
 	return true, nil
 }
 
-// setValue sets the struct field to the given value. The value will be
-// type-coerced in the field's type.
-func setValue(field *reflect.Value, value []string) error {
-	// Try to get it from TypeHandlers first so we can override primitives
-	// if we want to.
-	if fun, has := TypeHandlers[field.Type().String()]; has {
-		v := fun(field, value)
-		field.Set(reflect.ValueOf(v))
-		return nil
+func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
+	handler, has := TypeHandlers[field.Type().String()]
+	if !has {
+		return false, nil
 	}
 
-	iface := field.Interface()
-	switch iface.(type) {
-	// Primitives
-	case int, int8, int16, int32, int64:
-		bs := 32
-		switch iface.(type) {
-		case int8:
-			bs = 8
-		case int16:
-			bs = 16
-		case int64:
-			bs = 64
-		}
-		i, err := strconv.ParseInt(strings.Join(value, " "), 10, bs)
-		if err != nil {
-			return err
-		}
-		field.SetInt(i)
-	case uint, uint8, uint16, uint32, uint64:
-		bs := 32
-		switch iface.(type) {
-		case uint8:
-			bs = 8
-		case uint16:
-			bs = 16
-		case uint64:
-			bs = 64
-		}
-		i, err := strconv.ParseUint(strings.Join(value, " "), 10, bs)
-		if err != nil {
-			return err
-		}
-		field.SetUint(i)
-	case bool:
-		b, err := parseBool(strings.Join(value, " "))
-		if err != nil {
-			return err
-		}
-		field.SetBool(b)
-	case float32, float64:
-		bs := 32
-		switch iface.(type) {
-		case float64:
-			bs = 64
-		}
-		i, err := strconv.ParseFloat(strings.Join(value, " "), bs)
-		if err != nil {
-			return err
-		}
-		field.SetFloat(i)
-	case string:
-		field.SetString(strings.Join(value, " "))
-
-	// Arrays of primitives
-	// TODO: this code is a bit more verbose than I'd like...
-	case []int, []int8, []int16, []int32, []int64:
-		for _, v := range value {
-			switch iface.(type) {
-			case []int:
-				i, err := strconv.ParseInt(v, 10, 32)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(int(i))))
-			case []int8:
-				i, err := strconv.ParseInt(v, 10, 8)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(int8(i))))
-			case []int16:
-				i, err := strconv.ParseInt(v, 10, 16)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(int16(i))))
-			case []int32:
-				i, err := strconv.ParseInt(v, 10, 32)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(int32(i))))
-			case []int64:
-				i, err := strconv.ParseInt(v, 10, 64)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(i)))
-			}
-		}
-	case []uint, []uint8, []uint16, []uint32, []uint64:
-		for _, v := range value {
-			switch iface.(type) {
-			case []uint:
-				i, err := strconv.ParseUint(v, 10, 32)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(uint(i))))
-			case []uint8:
-				i, err := strconv.ParseUint(v, 10, 8)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(uint8(i))))
-			case []uint16:
-				i, err := strconv.ParseUint(v, 10, 16)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(uint16(i))))
-			case []uint32:
-				i, err := strconv.ParseUint(v, 10, 32)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(uint32(i))))
-			case []uint64:
-				i, err := strconv.ParseUint(v, 10, 64)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(i)))
-			}
-		}
-	case []bool:
-		for _, v := range value {
-			b, err := parseBool(v)
-			if err != nil {
-				return err
-			}
-			field.Set(reflect.Append(*field, reflect.ValueOf(b)))
-		}
-	case []float32, []float64:
-		for _, v := range value {
-			switch iface.(type) {
-			case []float32:
-				i, err := strconv.ParseFloat(v, 32)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(float32(i))))
-			case []float64:
-				i, err := strconv.ParseFloat(v, 64)
-				if err != nil {
-					return err
-				}
-				field.Set(reflect.Append(*field, reflect.ValueOf(i)))
-			}
-		}
-	case []string:
-		field.Set(reflect.ValueOf(value))
-
-	// Give up :-(
-	default:
-		return fmt.Errorf("don't know how to set fields of the type %s",
-			field.Type().String())
+	v, err := handler(value)
+	if err != nil {
+		return true, err
 	}
-
-	return nil
+	field.Set(reflect.ValueOf(v))
+	return true, nil
 }
 
 func parseBool(v string) (bool, error) {
@@ -478,6 +368,303 @@ func FindConfig(file string) string {
 	}
 
 	return ""
+}
+
+func handleString(v []string) (interface{}, error) {
+	return strings.Join(v, " "), nil
+}
+
+func handleBool(v []string) (interface{}, error) {
+	r, err := parseBool(v[0])
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func handleFloat32(v []string) (interface{}, error) {
+	r, err := strconv.ParseFloat(v[0], 32)
+	if err != nil {
+		return nil, err
+	}
+	return float32(r), nil
+}
+func handleFloat64(v []string) (interface{}, error) {
+	r, err := strconv.ParseFloat(v[0], 64)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func handleInt(v []string) (interface{}, error) {
+	// Can be 32 or 64 bits
+	if int(2147483647)<<1 > 0 {
+		h, _ := TypeHandlers["int64"]
+		r, err := h(v)
+		if err != nil {
+			return nil, err
+		}
+		return int(r.(int64)), err
+	}
+	h, _ := TypeHandlers["int32"]
+	r, err := h(v)
+	if err != nil {
+		return nil, err
+	}
+	return int(r.(int32)), err
+}
+
+func handleInt8(v []string) (interface{}, error) {
+	r, err := strconv.ParseInt(v[0], 10, 8)
+	if err != nil {
+		return nil, err
+	}
+	return int8(r), nil
+}
+
+func handleInt16(v []string) (interface{}, error) {
+	r, err := strconv.ParseInt(v[0], 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	return int16(r), nil
+}
+
+func handleInt32(v []string) (interface{}, error) {
+	r, err := strconv.ParseInt(v[0], 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	return int32(r), nil
+}
+func handleInt64(v []string) (interface{}, error) {
+	r, err := strconv.ParseInt(v[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func handleUint(v []string) (interface{}, error) {
+	// TODO: This is just too damn ugly
+	//defer func() (interface{}, error) {
+	//	rec := recover()
+
+	//	if !strings.HasSuffix(rec.(string), "overflows uint32") {
+	//		panic(rec)
+	//	}
+
+	//	h, _ := TypeHandlers["int32"]
+	//	r, err := h(v)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	return uint(r.(uint32)), err
+	//}()
+	//
+	// _ = uint(4294967296)
+
+	h, _ := TypeHandlers["uint64"]
+	r, err := h(v)
+	if err != nil {
+		return nil, err
+	}
+	return uint(r.(uint64)), err
+
+}
+
+func handleUint8(v []string) (interface{}, error) {
+	r, err := strconv.ParseUint(v[0], 10, 8)
+	if err != nil {
+		return nil, err
+	}
+	return uint8(r), nil
+}
+
+func handleUint16(v []string) (interface{}, error) {
+	r, err := strconv.ParseUint(v[0], 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	return uint16(r), nil
+}
+
+func handleUint32(v []string) (interface{}, error) {
+	r, err := strconv.ParseUint(v[0], 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	return uint32(r), nil
+}
+func handleUint64(v []string) (interface{}, error) {
+	r, err := strconv.ParseUint(v[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func handleStringSlice(v []string) (interface{}, error) {
+	return v, nil
+}
+
+func handleBoolSlice(v []string) (interface{}, error) {
+	a := make([]bool, len(v))
+	for i := range v {
+		r, err := parseBool(v[i])
+		if err != nil {
+			return nil, err
+		}
+		a[i] = r
+	}
+	return a, nil
+}
+
+func handleFloat32Slice(v []string) (interface{}, error) {
+	a := make([]float32, len(v))
+	for i := range v {
+		r, err := strconv.ParseFloat(v[i], 32)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = float32(r)
+	}
+	return a, nil
+}
+
+func handleFloat64Slice(v []string) (interface{}, error) {
+	a := make([]float64, len(v))
+	for i := range v {
+		r, err := strconv.ParseFloat(v[i], 64)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = r
+	}
+	return a, nil
+}
+
+func handleIntSlice(v []string) (interface{}, error) {
+	h, _ := TypeHandlers["int"]
+	a := make([]int, len(v))
+	for i := range v {
+		r, err := h([]string{v[i]})
+		if err != nil {
+			return nil, err
+		}
+		a[i] = r.(int)
+	}
+	return a, nil
+}
+
+func handleInt8Slice(v []string) (interface{}, error) {
+	a := make([]int8, len(v))
+	for i := range v {
+		r, err := strconv.ParseInt(v[i], 10, 8)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = int8(r)
+	}
+	return a, nil
+}
+
+func handleInt16Slice(v []string) (interface{}, error) {
+	a := make([]int16, len(v))
+	for i := range v {
+		r, err := strconv.ParseInt(v[i], 10, 16)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = int16(r)
+	}
+	return a, nil
+}
+
+func handleInt32Slice(v []string) (interface{}, error) {
+	a := make([]int32, len(v))
+	for i := range v {
+		r, err := strconv.ParseInt(v[i], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = int32(r)
+	}
+	return a, nil
+}
+
+func handleInt64Slice(v []string) (interface{}, error) {
+	a := make([]int64, len(v))
+	for i := range v {
+		r, err := strconv.ParseInt(v[i], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = r
+	}
+	return a, nil
+}
+
+func handleUintSlice(v []string) (interface{}, error) {
+	h, _ := TypeHandlers["uint"]
+	a := make([]uint, len(v))
+	for i := range v {
+		r, err := h([]string{v[i]})
+		if err != nil {
+			return nil, err
+		}
+		a[i] = r.(uint)
+	}
+	return a, nil
+}
+
+func handleUint8Slice(v []string) (interface{}, error) {
+	a := make([]uint8, len(v))
+	for i := range v {
+		r, err := strconv.ParseUint(v[i], 10, 8)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = uint8(r)
+	}
+	return a, nil
+}
+
+func handleUint16Slice(v []string) (interface{}, error) {
+	a := make([]uint16, len(v))
+	for i := range v {
+		r, err := strconv.ParseUint(v[i], 10, 16)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = uint16(r)
+	}
+	return a, nil
+}
+
+func handleUint32Slice(v []string) (interface{}, error) {
+	a := make([]uint32, len(v))
+	for i := range v {
+		r, err := strconv.ParseUint(v[i], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = uint32(r)
+	}
+	return a, nil
+}
+
+func handleUint64Slice(v []string) (interface{}, error) {
+	a := make([]uint64, len(v))
+	for i := range v {
+		r, err := strconv.ParseUint(v[i], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		a[i] = r
+	}
+	return a, nil
 }
 
 // The MIT License (MIT)

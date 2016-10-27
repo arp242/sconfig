@@ -54,15 +54,20 @@ Can be parsed with:
 		config := Config{}
 
 		// Let sconfig know how to parse []*regexp.Regexp
-		sconfig.TypeHandlers["[]*regexp.Regexp"] = func(field *reflect.Value, v []string) interface{} {
-			r := []*regexp.Regexp{}
-			for _, s := range v {
-				r = append(r, regexp.MustCompile(s))
+		TypeHandlers["[]*regexp.Regexp"] = func(v []string) (interface{}, error) {
+			a := make([]*regexp.Regexp, len(v))
+			for i := range v {
+				r, err := regexp.Compile(v[i])
+				if err != nil {
+					return nil, err
+				}
+				a[i] = r
 			}
-			return r
+			return a, nil
 		}
 
 		err := sconfig.Parse(&config, "config", map[string]func([]string){
+
 			// Customer handler
 			"address": func(line []string) error {
 				addr, err := net.LookupHost(line[0])
