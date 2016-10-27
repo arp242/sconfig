@@ -12,16 +12,16 @@ import (
 
 // testfile will write data to a temporary file and will return the full file
 // path. It is the caller's responsibility to clean the file.
-func testfile(t *testing.T, data string) (filename string) {
+func testfile(data string) (filename string) {
 	fp, err := ioutil.TempFile(os.TempDir(), "sconfigtest")
 	if err != nil {
-		t.Fail()
+		panic(err)
 	}
 	defer func() { _ = fp.Close() }()
 
 	_, err = fp.WriteString(data)
 	if err != nil {
-		t.Fail()
+		panic(err)
 	}
 	return fp.Name()
 }
@@ -37,7 +37,9 @@ func TestReadFileError(t *testing.T) {
 	}
 
 	// Sourced file doesn't exist
-	out, err = readFile(testfile(t, "source /nonexistent"))
+	f := testfile("source /nonexistent")
+	defer os.Remove(f)
+	out, err = readFile(f)
 	if err == nil {
 		t.Fail()
 	}
@@ -46,7 +48,9 @@ func TestReadFileError(t *testing.T) {
 	}
 
 	// First line is indented: makes no sense.
-	out, err = readFile(testfile(t, " indented"))
+	f2 := testfile(" indented")
+	defer os.Remove(f2)
+	out, err = readFile(f2)
 	if err == nil {
 		t.Fail()
 	}
@@ -56,7 +60,8 @@ func TestReadFileError(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	source := testfile(t, "sourced file")
+	source := testfile("sourced file")
+	defer os.Remove(source)
 
 	test := fmt.Sprintf(`
 # A comment
@@ -94,7 +99,9 @@ source %v
 		{"1", "sourced file"},
 	}
 
-	out, err := readFile(testfile(t, test))
+	f := testfile(test)
+	defer os.Remove(f)
+	out, err := readFile(f)
 	if err != nil {
 		t.Errorf("readFile: got err: %v", err)
 	}
@@ -145,7 +152,9 @@ type testPrimitives struct {
 
 func TestMustParse(t *testing.T) {
 	out := testPrimitives{}
-	MustParse(&out, testfile(t, "str okay"), nil)
+	f := testfile("str okay")
+	defer os.Remove(f)
+	MustParse(&out, f, nil)
 
 	defer func() {
 		err := recover()
@@ -157,7 +166,10 @@ func TestMustParse(t *testing.T) {
 			t.Errorf("panic has unexpected message")
 		}
 	}()
-	MustParse(&out, testfile(t, "not okay"), nil)
+
+	f2 := testfile("not okay")
+	defer os.Remove(f2)
+	MustParse(&out, f2, nil)
 }
 
 func TestParseError(t *testing.T) {
@@ -217,7 +229,9 @@ float64 3.14159
 	}
 
 	out := testPrimitives{}
-	err := Parse(&out, testfile(t, test), nil)
+	f := testfile(test)
+	defer os.Remove(f)
+	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -230,7 +244,9 @@ func TestDefaults(t *testing.T) {
 	out := testPrimitives{
 		Str: "default value",
 	}
-	err := Parse(&out, testfile(t, "bool on\n"), nil)
+	f := testfile("bool on\n")
+	defer os.Remove(f)
+	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -238,7 +254,9 @@ func TestDefaults(t *testing.T) {
 		t.Error()
 	}
 
-	err = Parse(&out, testfile(t, "str changed\n"), nil)
+	f2 := testfile("str changed\n")
+	defer os.Remove(f2)
+	err = Parse(&out, f2, nil)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -249,7 +267,9 @@ func TestDefaults(t *testing.T) {
 
 func TestParseHandlers(t *testing.T) {
 	out := testPrimitives{}
-	err := Parse(&out, testfile(t, "bool yup\n"), Handlers{
+	f := testfile("bool yup\n")
+	defer os.Remove(f)
+	err := Parse(&out, f, Handlers{
 		"Bool": func(line []string) {
 			if line[0] == "yup" {
 				out.Bool = true
@@ -322,7 +342,9 @@ float64 3.14159 1.2
 	}
 
 	out := testArray{}
-	err := Parse(&out, testfile(t, test), nil)
+	f := testfile(test)
+	defer os.Remove(f)
+	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -361,7 +383,9 @@ regs bar.* [hH]
 	`
 
 	out := testTypeHandlers{}
-	err := Parse(&out, testfile(t, test), nil)
+	f := testfile(test)
+	defer os.Remove(f)
+	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -420,7 +444,9 @@ host  # Multiline stuff
 		return r
 	}
 
-	err := Parse(&config, testfile(t, test), nil)
+	f := testfile(test)
+	defer os.Remove(f)
+	err := Parse(&config, f, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
 		t.Error(err.Error())
