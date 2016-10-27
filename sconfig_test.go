@@ -137,11 +137,11 @@ type testPrimitives struct {
 	Int16   int16
 	Int32   int32
 	Int64   int64
-	UInt    int
-	UInt8   int8
-	UInt16  int16
-	UInt32  int32
-	UInt64  int64
+	UInt    uint
+	UInt8   uint8
+	UInt16  uint16
+	UInt32  uint32
+	UInt64  uint64
 	Bool    bool
 	Bool2   bool
 	Bool3   bool
