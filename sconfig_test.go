@@ -28,23 +28,23 @@ func testfile(data string) (filename string) {
 
 func TestReadFileError(t *testing.T) {
 	// File doesn't exist
-	out, err := readFile("/nonexistent")
+	out, err := readFile("/nonexistent-file")
 	if err == nil {
-		t.Fail()
+		t.Error("no error on reading /nonexistent-file")
 	}
 	if len(out) > 0 {
 		t.Fail()
 	}
 
 	// Sourced file doesn't exist
-	f := testfile("source /nonexistent")
+	f := testfile("source /nonexistent-file")
 	defer os.Remove(f)
 	out, err = readFile(f)
 	if err == nil {
-		t.Fail()
+		t.Error("no error on sourcing /nonexistent-file")
 	}
 	if len(out) > 0 {
-		t.Fail()
+		t.Error("len(out) > 0")
 	}
 
 	// First line is indented: makes no sense.
@@ -52,10 +52,10 @@ func TestReadFileError(t *testing.T) {
 	defer os.Remove(f2)
 	out, err = readFile(f2)
 	if err == nil {
-		t.Fail()
+		t.Error("no error when first line is indented")
 	}
 	if len(out) > 0 {
-		t.Fail()
+		t.Error("len(out) > 0")
 	}
 }
 
@@ -174,13 +174,13 @@ func TestMustParse(t *testing.T) {
 
 func TestParseError(t *testing.T) {
 	out := testPrimitives{}
-	err := Parse(&out, "/nonexistent", nil)
+	err := Parse(&out, "/nonexistent-file", nil)
 	if err == nil {
-		t.Fail()
+		t.Error("no error when parsing /nonexistent-file")
 	}
 	e := testPrimitives{}
 	if out != e {
-		t.Fail()
+		t.Error("out isn't empty")
 	}
 }
 
