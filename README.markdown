@@ -113,7 +113,7 @@ Set default values?
 Just set them before parsing:
 
 	c := MyConfig{Value: "The default"}
-	sconfig.Parse("a-file", &c, sconfig.Handlers{})
+	sconfig.Parse(&c, "a-file", sconfig.Handlers{})
 
 
 Syntax
