@@ -1,6 +1,7 @@
 package sconfig
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // testfile will write data to a temporary file and will return the full file
@@ -147,7 +149,9 @@ type testPrimitives struct {
 	Bool3   bool
 	Bool4   bool
 	Float32 float32
-	Float64 float32
+	Float64 float64
+
+	TimeType time.Time
 }
 
 func TestMustParse(t *testing.T) {
@@ -162,8 +166,9 @@ func TestMustParse(t *testing.T) {
 			t.Errorf("expected panic")
 		}
 
-		if !strings.Contains(err.(error).Error(), "unknown option not") {
-			t.Errorf("panic has unexpected message")
+		expected := " line 1: error parsing not: unknown option (field Not or Nots is missing)"
+		if !strings.HasSuffix(err.(error).Error(), expected) {
+			t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.(error).Error())
 		}
 	}()
 
@@ -240,6 +245,30 @@ float64 3.14159
 	}
 }
 
+func TestInvalidPrimitives(t *testing.T) {
+	tests := map[string]string{
+		"\n\nInt false":              `line 3: error parsing Int: strconv.ParseInt: parsing "false": invalid syntax`,
+		"Bool what?":                 `line 1: error parsing Bool: unable to parse "what?" as a boolean`,
+		"woot field":                 `line 1: error parsing woot: unknown option (field Woot or Woots is missing)`,
+		"\n\n\n\ntime-type 2016\n\n": `line 5: error parsing time-type: don't know how to set fields of the type time.Time`,
+	}
+
+	for test, expected := range tests {
+		f := testfile(test)
+		defer os.Remove(f)
+
+		out := testPrimitives{}
+		err := Parse(&out, f, nil)
+		if err == nil {
+			t.Error("got to have an error")
+		}
+		if !strings.HasSuffix(err.Error(), expected) {
+			t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
+		}
+	}
+
+}
+
 func TestDefaults(t *testing.T) {
 	out := testPrimitives{
 		Str: "default value",
@@ -267,21 +296,35 @@ func TestDefaults(t *testing.T) {
 
 func TestParseHandlers(t *testing.T) {
 	out := testPrimitives{}
-	f := testfile("bool yup\n")
+	f := testfile("bool false\nInt 42\n")
 	defer os.Remove(f)
+
 	err := Parse(&out, f, Handlers{
-		"Bool": func(line []string) {
-			if line[0] == "yup" {
+		"Bool": func(line []string) (err error) {
+			if line[0] == "false" {
 				out.Bool = true
 			}
+			return
 		},
 	})
 	if err != nil {
 		t.Error(err.Error())
 	}
-
 	if !out.Bool {
 		t.Error()
+	}
+
+	err = Parse(&out, f, Handlers{
+		"Int": func(line []string) (err error) {
+			return errors.New("Oh noes!")
+		},
+	})
+	if err == nil {
+		t.Error("error is nil")
+	}
+	expected := " line 2: error parsing Int: Oh noes! (from handler)"
+	if !strings.HasSuffix(err.Error(), expected) {
+		t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
 	}
 }
 

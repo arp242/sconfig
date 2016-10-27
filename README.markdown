@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/Carpetsmoker/sconfig.svg?branch=master)](https://travis-ci.org/Carpetsmoker/sconfig)
 [![Coverage Status](https://coveralls.io/repos/github/Carpetsmoker/sconfig/badge.svg?branch=master)](https://coveralls.io/github/Carpetsmoker/sconfig?branch=master)
 
-`sconfig` is a simple yet functional configuration file parser for Go.
+`sconfig` is a simple and functional configuration file parser for Go.
 
 What does it look like?
 =======================
@@ -24,9 +24,11 @@ A file like this:
 	# Two values
 	order allow deny
 
-	host  # Multiline stuff
+	host  # Idented lines are collapsed
 		arp242.net         # My website
 		stackoverflow.com  # I like this too
+
+	address arp242.net
 
 Can be parsed with:
 
@@ -45,10 +47,13 @@ Can be parsed with:
 		Match   []*regexp.Regexp
 		Order   []string
 		Hosts   []string
+		Address string
 	}
 
 	func main() {
 		config := Config{}
+
+		// Let sconfig know how to parse []*regexp.Regexp
 		sconfig.TypeHandlers["[]*regexp.Regexp"] = func(field *reflect.Value, v []string) interface{} {
 			r := []*regexp.Regexp{}
 			for _, s := range v {
@@ -57,7 +62,18 @@ Can be parsed with:
 			return r
 		}
 
-		err := sconfig.Parse(&config, "config", nil)
+		err := sconfig.Parse(&config, "config", map[string]func([]string){
+			// Customer handler
+			"address": func(line []string) error {
+				addr, err := net.LookupHost(line[0])
+				if err != nil {
+					return err
+				}
+
+				config.Address = addr[0]
+			},
+		})
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
 		}

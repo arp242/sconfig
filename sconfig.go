@@ -27,7 +27,7 @@ type TypeHandler func(*reflect.Value, []string) interface{}
 // Handler functions can be used to run special code for a field. The function
 // takes the unprocessed line split by whitespace and with the option name
 // removed.
-type Handler func(line []string)
+type Handler func([]string) error
 
 // Handlers can be used to run special code for a field. The map key is the name
 // of the field in the struct.
@@ -180,38 +180,40 @@ func Parse(c interface{}, file string, handlers Handlers) error {
 
 	// Get list of rule names from tags
 	for _, line := range lines {
-		// Record source file and line number for errors
-		src := file + ":" + line[0]
-
 		// Split by spaces
 		v := strings.Split(line[1], " ")
 
 		// Infer the field name from the key
-		fieldName, err := fieldNameFromKey(v[0], src, values)
+		fieldName, err := fieldNameFromKey(v[0], values)
 		if err != nil {
-			return err
+			return fmterr(file, line[0], v[0], err)
 		}
 		field := values.FieldByName(fieldName)
 
-		// Use the handler that was given
-		if handlers != nil {
-			handler, has := handlers[fieldName]
-			if has {
-				handler(v[1:])
-				continue
+		// Use the handler if it exists
+		if has, err := getHandler(fieldName, v[1:], handlers); has {
+			if err != nil {
+				return fmterr(file, line[0], v[0], err)
 			}
+			continue
 		}
 
+		// Regular value
 		err = setValue(&field, v[1:])
 		if err != nil {
-			return err
+			return fmterr(file, line[0], v[0], err)
 		}
 	}
 
 	return nil
 }
 
-func fieldNameFromKey(key, src string, values reflect.Value) (string, error) {
+func fmterr(file, line, key string, err error) error {
+	return fmt.Errorf("%v line %v: error parsing %s: %v",
+		file, line, key, err)
+}
+
+func fieldNameFromKey(key string, values reflect.Value) (string, error) {
 	fieldName := inflect.Camelize(key)
 
 	// TODO: Maybe find better inflect package that deals with this already?
@@ -231,13 +233,31 @@ func fieldNameFromKey(key, src string, values reflect.Value) (string, error) {
 		fieldNamePlural := inflect.Pluralize(fieldName)
 		field = values.FieldByName(fieldNamePlural)
 		if !field.CanAddr() {
-			return "", fmt.Errorf("%s: unknown option %s (field %s or %s is missing)",
-				src, key, fieldName, fieldNamePlural)
+			return "", fmt.Errorf("unknown option (field %s or %s is missing)",
+				fieldName, fieldNamePlural)
 		}
 		fieldName = fieldNamePlural
 	}
 
 	return fieldName, nil
+}
+
+func getHandler(fieldName string, values []string, handlers Handlers) (bool, error) {
+	if handlers == nil {
+		return false, nil
+	}
+
+	handler, has := handlers[fieldName]
+	if !has {
+		return false, nil
+	}
+
+	err := handler(values)
+	if err != nil {
+		return true, fmt.Errorf("%v (from handler)", err)
+	}
+
+	return true, nil
 }
 
 // setValue sets the struct field to the given value. The value will be
@@ -420,7 +440,7 @@ func parseBool(v string) (bool, error) {
 	case "0", "false", "no", "off", "disable", "disabled":
 		return false, nil
 	default:
-		return false, fmt.Errorf("unable to parse %s as a boolean", v)
+		return false, fmt.Errorf(`unable to parse "%s" as a boolean`, v)
 	}
 }
 
