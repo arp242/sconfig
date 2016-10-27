@@ -1,7 +1,7 @@
 language: go
 go_import_path: arp242.net/sconfig
 go:
-	- 1.5
-	- 1.6
-	- 1.7
-	- master
+  - 1.5
+  - 1.6
+  - 1.7
+  - master
