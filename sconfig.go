@@ -5,6 +5,7 @@ package sconfig
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -39,8 +40,6 @@ func init() {
 
 func defaultTypeHandlers() {
 	TypeHandlers = map[string]TypeHandler{
-		// TODO: Parameters after the first are now all just ignored; should be
-		// an error
 		"string":  handleString,
 		"bool":    handleBool,
 		"float32": handleFloat32,
@@ -364,10 +363,16 @@ func FindConfig(file string) string {
 // -----------------------------
 
 func handleString(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
 	return strings.Join(v, " "), nil
 }
 
 func handleBool(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
 	r, err := parseBool(v[0])
 	if err != nil {
 		return nil, err
@@ -376,6 +381,9 @@ func handleBool(v []string) (interface{}, error) {
 }
 
 func handleFloat32(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
 	r, err := strconv.ParseFloat(v[0], 32)
 	if err != nil {
 		return nil, err
@@ -383,6 +391,9 @@ func handleFloat32(v []string) (interface{}, error) {
 	return float32(r), nil
 }
 func handleFloat64(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
 	r, err := strconv.ParseFloat(v[0], 64)
 	if err != nil {
 		return nil, err
@@ -391,6 +402,9 @@ func handleFloat64(v []string) (interface{}, error) {
 }
 
 func handleInt64(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
 	r, err := strconv.ParseInt(v[0], 10, 64)
 	if err != nil {
 		return nil, err
@@ -399,6 +413,9 @@ func handleInt64(v []string) (interface{}, error) {
 }
 
 func handleUint64(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
 	r, err := strconv.ParseUint(v[0], 10, 64)
 	if err != nil {
 		return nil, err

@@ -7,7 +7,6 @@
 
 What does it look like?
 =======================
-
 A file like this:
 
 	# This is a comment
@@ -39,6 +38,9 @@ Can be parsed with:
 		"os"
 
 		"arp242.net/sconfig"
+
+		// Types that need imports are in handlers/pkgname
+		_ "arp242.net/sconfig/handlers/regexp"
 	)
 
 	type Config struct {
@@ -52,22 +54,7 @@ Can be parsed with:
 
 	func main() {
 		config := Config{}
-
-		// Let sconfig know how to parse []*regexp.Regexp
-		TypeHandlers["[]*regexp.Regexp"] = func(v []string) (interface{}, error) {
-			a := make([]*regexp.Regexp, len(v))
-			for i := range v {
-				r, err := regexp.Compile(v[i])
-				if err != nil {
-					return nil, err
-				}
-				a[i] = r
-			}
-			return a, nil
-		}
-
-		err := sconfig.Parse(&config, "config", map[string]func([]string){
-
+		err := sconfig.Parse(&config, "config", sconfig.Handlers{
 			// Customer handler
 			"address": func(line []string) error {
 				addr, err := net.LookupHost(line[0])
@@ -76,6 +63,7 @@ Can be parsed with:
 				}
 
 				config.Address = addr[0]
+				return nil
 			},
 		})
 
