@@ -45,49 +45,33 @@ func defaultTypeHandlers() {
 		"bool":    handleBool,
 		"float32": handleFloat32,
 		"float64": handleFloat64,
-		"int":     handleInt,
-		"int8":    handleInt8,
-		"int16":   handleInt16,
-		"int32":   handleInt32,
 		"int64":   handleInt64,
-		"uint":    handleUint,
-		"uint8":   handleUint8,
-		"uint16":  handleUint16,
-		"uint32":  handleUint32,
 		"uint64":  handleUint64,
 
 		"[]string":  handleStringSlice,
 		"[]bool":    handleBoolSlice,
 		"[]float32": handleFloat32Slice,
 		"[]float64": handleFloat64Slice,
-
-		"[]int":   handleIntSlice,
-		"[]int8":  handleInt8Slice,
-		"[]int16": handleInt16Slice,
-		"[]int32": handleInt32Slice,
-		"[]int64": handleInt64Slice,
-
-		"[]uint":   handleUintSlice,
-		"[]uint8":  handleUint8Slice,
-		"[]uint16": handleUint16Slice,
-		"[]uint32": handleUint32Slice,
-		"[]uint64": handleUint64Slice,
+		"[]int64":   handleInt64Slice,
+		"[]uint64":  handleUint64Slice,
 	}
 }
 
 // readFile will read a file, strip comments, and collapse indents. This also
 // deals with the special "source" command.
 //
-// The return value is an array of arrays, where the first item is the original
-// line number and the second is the actual line; for example:
+// The return value is an nested slice where the first item is the original line
+// number and the second is the parsed line; for example:
 //
 //     [][]string{
 //         []string{3, "key value"},
 //         []string{9, "key2 value1 value2"},
 //     }
 //
-// It expects the input file to be utf-8 encoded; other encodings are not
-// supported.
+// The line numbers can be used later to give more informative error messages.
+//
+// The input must be utf-8 encoded; other encodings are not supported.
+//TODO: Should func readFile(in io.Writer) (lines [][]string, err error) {
 func readFile(file string) (lines [][]string, err error) {
 	fp, err := os.Open(file)
 	if err != nil {
@@ -103,6 +87,8 @@ func readFile(file string) (lines [][]string, err error) {
 
 		isIndented := len(line) > 0 && unicode.IsSpace(rune(line[0]))
 		line = strings.TrimSpace(line)
+
+		// Skip empty lines and comments
 		if line == "" || line[0] == '#' {
 			continue
 		}
@@ -113,13 +99,15 @@ func readFile(file string) (lines [][]string, err error) {
 			if i == 0 {
 				return lines, fmt.Errorf("first line can't be indented")
 			}
+			// Append to previous line; don't increment i since there may be
+			// more indented lines.
 			lines[i-1][1] += " " + line
 		} else {
-			// Source
+			// Source command
 			if strings.HasPrefix(line, "source ") {
 				sourced, err := readFile(line[7:])
 				if err != nil {
-					return [][]string{}, err
+					return nil, err
 				}
 				lines = append(lines, sourced...)
 			} else {
@@ -212,6 +200,7 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 //     })
 //
 // TODO: Document more
+//TODO: should func Parse(c interface{}, in io.Reader, handlers Handlers) error {
 func Parse(c interface{}, file string, handlers Handlers) error {
 	lines, err := readFile(file)
 	if err != nil {
@@ -343,6 +332,7 @@ func parseBool(v string) (bool, error) {
 //   /usr/local/etc/$file
 //   /usr/pkg/etc/$file
 //   ./$file
+//TODO: Should func FindConfig(file string) io.Reader {
 func FindConfig(file string) string {
 	file = strings.TrimLeft(file, "/")
 
@@ -369,6 +359,9 @@ func FindConfig(file string) string {
 
 	return ""
 }
+
+// The default handler functions
+// -----------------------------
 
 func handleString(v []string) (interface{}, error) {
 	return strings.Join(v, " "), nil
@@ -397,47 +390,6 @@ func handleFloat64(v []string) (interface{}, error) {
 	return r, nil
 }
 
-func handleInt(v []string) (interface{}, error) {
-	// Can be 32 or 64 bits
-	if int(2147483647)<<1 > 0 {
-		h, _ := TypeHandlers["int64"]
-		r, err := h(v)
-		if err != nil {
-			return nil, err
-		}
-		return int(r.(int64)), err
-	}
-	h, _ := TypeHandlers["int32"]
-	r, err := h(v)
-	if err != nil {
-		return nil, err
-	}
-	return int(r.(int32)), err
-}
-
-func handleInt8(v []string) (interface{}, error) {
-	r, err := strconv.ParseInt(v[0], 10, 8)
-	if err != nil {
-		return nil, err
-	}
-	return int8(r), nil
-}
-
-func handleInt16(v []string) (interface{}, error) {
-	r, err := strconv.ParseInt(v[0], 10, 16)
-	if err != nil {
-		return nil, err
-	}
-	return int16(r), nil
-}
-
-func handleInt32(v []string) (interface{}, error) {
-	r, err := strconv.ParseInt(v[0], 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	return int32(r), nil
-}
 func handleInt64(v []string) (interface{}, error) {
 	r, err := strconv.ParseInt(v[0], 10, 64)
 	if err != nil {
@@ -446,57 +398,6 @@ func handleInt64(v []string) (interface{}, error) {
 	return r, nil
 }
 
-func handleUint(v []string) (interface{}, error) {
-	// TODO: This is just too damn ugly
-	//defer func() (interface{}, error) {
-	//	rec := recover()
-
-	//	if !strings.HasSuffix(rec.(string), "overflows uint32") {
-	//		panic(rec)
-	//	}
-
-	//	h, _ := TypeHandlers["int32"]
-	//	r, err := h(v)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	return uint(r.(uint32)), err
-	//}()
-	//
-	// _ = uint(4294967296)
-
-	h, _ := TypeHandlers["uint64"]
-	r, err := h(v)
-	if err != nil {
-		return nil, err
-	}
-	return uint(r.(uint64)), err
-
-}
-
-func handleUint8(v []string) (interface{}, error) {
-	r, err := strconv.ParseUint(v[0], 10, 8)
-	if err != nil {
-		return nil, err
-	}
-	return uint8(r), nil
-}
-
-func handleUint16(v []string) (interface{}, error) {
-	r, err := strconv.ParseUint(v[0], 10, 16)
-	if err != nil {
-		return nil, err
-	}
-	return uint16(r), nil
-}
-
-func handleUint32(v []string) (interface{}, error) {
-	r, err := strconv.ParseUint(v[0], 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	return uint32(r), nil
-}
 func handleUint64(v []string) (interface{}, error) {
 	r, err := strconv.ParseUint(v[0], 10, 64)
 	if err != nil {
@@ -545,55 +446,6 @@ func handleFloat64Slice(v []string) (interface{}, error) {
 	return a, nil
 }
 
-func handleIntSlice(v []string) (interface{}, error) {
-	h, _ := TypeHandlers["int"]
-	a := make([]int, len(v))
-	for i := range v {
-		r, err := h([]string{v[i]})
-		if err != nil {
-			return nil, err
-		}
-		a[i] = r.(int)
-	}
-	return a, nil
-}
-
-func handleInt8Slice(v []string) (interface{}, error) {
-	a := make([]int8, len(v))
-	for i := range v {
-		r, err := strconv.ParseInt(v[i], 10, 8)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = int8(r)
-	}
-	return a, nil
-}
-
-func handleInt16Slice(v []string) (interface{}, error) {
-	a := make([]int16, len(v))
-	for i := range v {
-		r, err := strconv.ParseInt(v[i], 10, 16)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = int16(r)
-	}
-	return a, nil
-}
-
-func handleInt32Slice(v []string) (interface{}, error) {
-	a := make([]int32, len(v))
-	for i := range v {
-		r, err := strconv.ParseInt(v[i], 10, 32)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = int32(r)
-	}
-	return a, nil
-}
-
 func handleInt64Slice(v []string) (interface{}, error) {
 	a := make([]int64, len(v))
 	for i := range v {
@@ -602,55 +454,6 @@ func handleInt64Slice(v []string) (interface{}, error) {
 			return nil, err
 		}
 		a[i] = r
-	}
-	return a, nil
-}
-
-func handleUintSlice(v []string) (interface{}, error) {
-	h, _ := TypeHandlers["uint"]
-	a := make([]uint, len(v))
-	for i := range v {
-		r, err := h([]string{v[i]})
-		if err != nil {
-			return nil, err
-		}
-		a[i] = r.(uint)
-	}
-	return a, nil
-}
-
-func handleUint8Slice(v []string) (interface{}, error) {
-	a := make([]uint8, len(v))
-	for i := range v {
-		r, err := strconv.ParseUint(v[i], 10, 8)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = uint8(r)
-	}
-	return a, nil
-}
-
-func handleUint16Slice(v []string) (interface{}, error) {
-	a := make([]uint16, len(v))
-	for i := range v {
-		r, err := strconv.ParseUint(v[i], 10, 16)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = uint16(r)
-	}
-	return a, nil
-}
-
-func handleUint32Slice(v []string) (interface{}, error) {
-	a := make([]uint32, len(v))
-	for i := range v {
-		r, err := strconv.ParseUint(v[i], 10, 32)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = uint32(r)
 	}
 	return a, nil
 }

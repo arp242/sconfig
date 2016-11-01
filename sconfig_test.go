@@ -133,15 +133,7 @@ func TestFindConfig(t *testing.T) {
 
 type testPrimitives struct {
 	Str     string
-	Int     int
-	Int8    int8
-	Int16   int16
-	Int32   int32
 	Int64   int64
-	UInt    uint
-	UInt8   uint8
-	UInt16  uint16
-	UInt32  uint32
 	UInt64  uint64
 	Bool    bool
 	Bool2   bool
@@ -191,38 +183,18 @@ func TestParseError(t *testing.T) {
 func TestParsePrimitives(t *testing.T) {
 	test := `
 str foo
-
-int 42
-int8 43
-int16 44
-int32 45
 int64 46
-
-uint 47
-uint8 48
-uint16 49
-uint32 50
 uint64 51
-
 bool yes
 bool2 true
 bool3 1
 bool4 no
-
 float32 3.14
 float64 3.14159
 `
 	expected := testPrimitives{
 		Str:     "foo",
-		Int:     42,
-		Int8:    43,
-		Int16:   44,
-		Int32:   45,
 		Int64:   46,
-		UInt:    47,
-		UInt8:   48,
-		UInt16:  49,
-		UInt32:  50,
 		UInt64:  51,
 		Bool:    true,
 		Bool2:   true,
@@ -246,7 +218,7 @@ float64 3.14159
 
 func TestInvalidPrimitives(t *testing.T) {
 	tests := map[string]string{
-		"\n\nInt false":              `line 3: error parsing Int: strconv.ParseInt: parsing "false": invalid syntax`,
+		"\n\nInt64 false":            `line 3: error parsing Int64: strconv.ParseInt: parsing "false": invalid syntax`,
 		"Bool what?":                 `line 1: error parsing Bool: unable to parse "what?" as a boolean`,
 		"woot field":                 `line 1: error parsing woot: unknown option (field Woot or Woots is missing)`,
 		"\n\n\n\ntime-type 2016\n\n": `line 5: error parsing time-type: don't know how to set fields of the type time.Time`,
@@ -254,15 +226,7 @@ func TestInvalidPrimitives(t *testing.T) {
 		"float32 42,42": `invalid syntax`,
 		"float64 42,42": `invalid syntax`,
 
-		"int nope":    `invalid syntax`,
-		"int8 nope":   `invalid syntax`,
-		"int16 nope":  `invalid syntax`,
-		"int32 nope":  `invalid syntax`,
 		"int64 nope":  `invalid syntax`,
-		"uint nope":   `invalid syntax`,
-		"uint8 nope":  `invalid syntax`,
-		"uint16 nope": `invalid syntax`,
-		"uint32 nope": `invalid syntax`,
 		"uint64 nope": `invalid syntax`,
 
 		//"int 32 64": `TODO`,
@@ -312,7 +276,7 @@ func TestDefaults(t *testing.T) {
 
 func TestParseHandlers(t *testing.T) {
 	out := testPrimitives{}
-	f := testfile("bool false\nInt 42\n")
+	f := testfile("bool false\nInt64 42\n")
 	defer os.Remove(f)
 
 	err := Parse(&out, f, Handlers{
@@ -331,14 +295,14 @@ func TestParseHandlers(t *testing.T) {
 	}
 
 	err = Parse(&out, f, Handlers{
-		"Int": func(line []string) (err error) {
+		"Int64": func(line []string) (err error) {
 			return errors.New("Oh noes!")
 		},
 	})
 	if err == nil {
 		t.Error("error is nil")
 	}
-	expected := " line 2: error parsing Int: Oh noes! (from handler)"
+	expected := " line 2: error parsing Int64: Oh noes! (from handler)"
 	if !strings.HasSuffix(err.Error(), expected) {
 		t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
 	}
@@ -346,15 +310,7 @@ func TestParseHandlers(t *testing.T) {
 
 type testArray struct {
 	Str      []string
-	Int      []int
-	Int8     []int8
-	Int16    []int16
-	Int32    []int32
 	Int64    []int64
-	UInt     []uint
-	UInt8    []uint8
-	UInt16   []uint16
-	UInt32   []uint32
 	UInt64   []uint64
 	Bool     []bool
 	Float32  []float32
@@ -365,36 +321,16 @@ type testArray struct {
 func TestParseArray(t *testing.T) {
 	test := `
 str foo bar
-
-int 42 666
-int8 43 100
-int16 44 668
-int32 45 669
 int64 46 700
-
-uint 47 71
-uint8 48 101
-uint16 49 703
-uint32 50 704
 uint64 51 705
-
 bool yes no yes
-
 float32 3.14 1.1
 float64 3.14159 1.2
 `
 
 	expected := testArray{
 		Str:     []string{"foo", "bar"},
-		Int:     []int{42, 666},
-		Int8:    []int8{43, 100},
-		Int16:   []int16{44, 668},
-		Int32:   []int32{45, 669},
 		Int64:   []int64{46, 700},
-		UInt:    []uint{47, 71},
-		UInt8:   []uint8{48, 101},
-		UInt16:  []uint16{49, 703},
-		UInt32:  []uint32{50, 704},
 		UInt64:  []uint64{51, 705},
 		Bool:    []bool{true, false, true},
 		Float32: []float32{3.14, 1.1},
@@ -415,7 +351,7 @@ float64 3.14159 1.2
 
 func TestInvalidArray(t *testing.T) {
 	tests := map[string]string{
-		"\n\nInt false":              `line 3: error parsing Int: strconv.ParseInt: parsing "false": invalid syntax`,
+		"\n\nInt64 false":            `line 3: error parsing Int64: strconv.ParseInt: parsing "false": invalid syntax`,
 		"Bool what?":                 `line 1: error parsing Bool: unable to parse "what?" as a boolean`,
 		"woot field":                 `line 1: error parsing woot: unknown option (field Woot or Woots is missing)`,
 		"\n\n\n\ntime-type 2016\n\n": `line 5: error parsing time-type: don't know how to set fields of the type []time.Time`,
@@ -423,15 +359,7 @@ func TestInvalidArray(t *testing.T) {
 		"float32 42,42": `invalid syntax`,
 		"float64 42,42": `invalid syntax`,
 
-		"int nope":    `invalid syntax`,
-		"int8 nope":   `invalid syntax`,
-		"int16 nope":  `invalid syntax`,
-		"int32 nope":  `invalid syntax`,
 		"int64 nope":  `invalid syntax`,
-		"uint nope":   `invalid syntax`,
-		"uint8 nope":  `invalid syntax`,
-		"uint16 nope": `invalid syntax`,
-		"uint32 nope": `invalid syntax`,
 		"uint64 nope": `invalid syntax`,
 
 		//"int 32 64": `TODO`,
@@ -551,7 +479,7 @@ host  # Multiline stuff
 `
 
 	type Config struct {
-		Port    int
+		Port    int64
 		BaseURL string
 		Match   []*regexp.Regexp
 		Order   []string
