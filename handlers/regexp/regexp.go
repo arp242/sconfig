@@ -8,8 +8,8 @@ import (
 )
 
 func init() {
-	sconfig.TypeHandlers["[]*regexp.Regexp"] = handleRegexpSlice
-	sconfig.TypeHandlers["*regexp.Regexp"] = handleRegexp
+	sconfig.RegisterType("[]*regexp.Regexp", handleRegexpSlice)
+	sconfig.RegisterType("*regexp.Regexp", handleRegexp)
 }
 
 func handleRegexp(v []string) (interface{}, error) {

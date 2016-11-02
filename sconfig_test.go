@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -128,7 +129,29 @@ func TestFindConfigErrors(t *testing.T) {
 }
 
 func TestFindConfig(t *testing.T) {
-	// TODO: Test this
+	find := FindConfig("sure_this_wont_exist/anywhere")
+	if find != "" {
+		t.Fail()
+	}
+
+	dir, err := ioutil.TempDir(os.TempDir(), "sconfig_test")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(dir)
+
+	f, err := ioutil.TempFile(dir, "config")
+	if err != nil {
+		t.Error(err)
+	}
+
+	os.Setenv("XDG_CONFIG", dir)
+	find = FindConfig(filepath.Base(f.Name()))
+	if find != f.Name() {
+		t.Fail()
+	}
+
+	//t.Fail()
 }
 
 type testPrimitives struct {
@@ -229,7 +252,8 @@ func TestInvalidPrimitives(t *testing.T) {
 		"int64 nope":  `invalid syntax`,
 		"uint64 nope": `invalid syntax`,
 
-		//"int 32 64": `TODO`,
+		`str two values`: `line 1: error parsing str: must have exactly one value`,
+		`uint64`:         `line 1: error parsing uint64: must have exactly one value`,
 	}
 
 	for test, expected := range tests {
@@ -246,7 +270,6 @@ func TestInvalidPrimitives(t *testing.T) {
 			t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
 		}
 	}
-
 }
 
 func TestDefaults(t *testing.T) {
@@ -362,7 +385,7 @@ func TestInvalidArray(t *testing.T) {
 		"int64 nope":  `invalid syntax`,
 		"uint64 nope": `invalid syntax`,
 
-		//"int 32 64": `TODO`,
+		"int64": `line 1: error parsing int64: must have more than 1 values (has: 0)`,
 	}
 
 	for test, expected := range tests {
@@ -372,7 +395,7 @@ func TestInvalidArray(t *testing.T) {
 		out := testArray{}
 		err := Parse(&out, f, nil)
 		if err == nil {
-			t.Error("got to have an error")
+			t.Errorf("got to have an error for %v", test)
 			t.FailNow()
 		}
 		if !strings.HasSuffix(err.Error(), expected) {
@@ -388,6 +411,7 @@ type testTypeHandlers struct {
 	Regs []*regexp.Regexp
 }
 
+/* TODO
 func TestParseTypeHandlers(t *testing.T) {
 	defer defaultTypeHandlers()
 
@@ -457,58 +481,4 @@ regs bar.* [hH]
 		t.Error(err)
 	}
 }
-
-func TestExample(t *testing.T) {
-	test := `# This is a comment
-
-port 8080 # This is also a comment
-
-# Look ma, no quotes!
-base-url http://example.com
-
-# We'll parse these in a []*regexp.Regexp
-match ^foo.+
-match ^b[ao]r
-
-# Two values
-order allow deny
-
-host  # Multiline stuff
-	arp242.net         # My website
-	stackoverflow.com  # I like this too
-`
-
-	type Config struct {
-		Port    int64
-		BaseURL string
-		Match   []*regexp.Regexp
-		Order   []string
-		Hosts   []string
-	}
-
-	config := Config{}
-	TypeHandlers["[]*regexp.Regexp"] = func(v []string) (interface{}, error) {
-		a := make([]*regexp.Regexp, len(v))
-		for i := range v {
-			r, err := regexp.Compile(v[i])
-			if err != nil {
-				return nil, err
-			}
-			a[i] = r
-		}
-		return a, nil
-	}
-
-	f := testfile(test)
-	defer os.Remove(f)
-	err := Parse(&config, f, nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
-		t.Error(err.Error())
-	}
-
-	//if err == nil {
-	//	fmt.Printf("%#v\n", config)
-	//	t.Fail()
-	//}
-}
+*/

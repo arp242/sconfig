@@ -19,7 +19,10 @@ import (
 // TypeHandlers can be used to handle types other than the basic builtin ones;
 // it's also possible to override the default types. The key is the name of the
 // type.
-var TypeHandlers = make(map[string]TypeHandler)
+//
+// The TypeHandlers are chained; the return value is passed to the next one. The
+// chain is stopped if one handler returns a non-nil error.
+var TypeHandlers = make(map[string][]TypeHandler)
 
 // TypeHandler takes the field to set and the value to set it to. It is expected
 // to return the value to set it to.
@@ -39,21 +42,25 @@ func init() {
 }
 
 func defaultTypeHandlers() {
-	TypeHandlers = map[string]TypeHandler{
-		"string":  handleString,
-		"bool":    handleBool,
-		"float32": handleFloat32,
-		"float64": handleFloat64,
-		"int64":   handleInt64,
-		"uint64":  handleUint64,
-
-		"[]string":  handleStringSlice,
-		"[]bool":    handleBoolSlice,
-		"[]float32": handleFloat32Slice,
-		"[]float64": handleFloat64Slice,
-		"[]int64":   handleInt64Slice,
-		"[]uint64":  handleUint64Slice,
+	TypeHandlers = map[string][]TypeHandler{
+		"string":    {ValidateSingleValue, handleString},
+		"bool":      {ValidateSingleValue, handleBool},
+		"float32":   {ValidateSingleValue, handleFloat32},
+		"float64":   {ValidateSingleValue, handleFloat64},
+		"int64":     {ValidateSingleValue, handleInt64},
+		"uint64":    {ValidateSingleValue, handleUint64},
+		"[]string":  {ValidateValueLimit(1, 0), handleStringSlice},
+		"[]bool":    {ValidateValueLimit(1, 0), handleBoolSlice},
+		"[]float32": {ValidateValueLimit(1, 0), handleFloat32Slice},
+		"[]float64": {ValidateValueLimit(1, 0), handleFloat64Slice},
+		"[]int64":   {ValidateValueLimit(1, 0), handleInt64Slice},
+		"[]uint64":  {ValidateValueLimit(1, 0), handleUint64Slice},
 	}
+}
+
+// RegisterType TODO
+func RegisterType(typ string, fun ...TypeHandler) {
+	TypeHandlers[typ] = fun
 }
 
 // readFile will read a file, strip comments, and collapse indents. This also
@@ -70,7 +77,6 @@ func defaultTypeHandlers() {
 // The line numbers can be used later to give more informative error messages.
 //
 // The input must be utf-8 encoded; other encodings are not supported.
-//TODO: Should func readFile(in io.Writer) (lines [][]string, err error) {
 func readFile(file string) (lines [][]string, err error) {
 	fp, err := os.Open(file)
 	if err != nil {
@@ -199,7 +205,6 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 //     })
 //
 // TODO: Document more
-//TODO: should func Parse(c interface{}, in io.Reader, handlers Handlers) error {
 func Parse(c interface{}, file string, handlers Handlers) error {
 	lines, err := readFile(file)
 	if err != nil {
@@ -303,9 +308,15 @@ func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
 		return false, nil
 	}
 
-	v, err := handler(value)
-	if err != nil {
-		return true, err
+	var (
+		v   interface{}
+		err error
+	)
+	for _, h := range handler {
+		v, err = h(value)
+		if err != nil {
+			return true, err
+		}
 	}
 	field.Set(reflect.ValueOf(v))
 	return true, nil
@@ -331,7 +342,6 @@ func parseBool(v string) (bool, error) {
 //   /usr/local/etc/$file
 //   /usr/pkg/etc/$file
 //   ./$file
-//TODO: Should func FindConfig(file string) io.Reader {
 func FindConfig(file string) string {
 	file = strings.TrimLeft(file, "/")
 
@@ -359,20 +369,36 @@ func FindConfig(file string) string {
 	return ""
 }
 
+// ValidateSingleValue TODO
+func ValidateSingleValue(v []string) (interface{}, error) {
+	if len(v) != 1 {
+		return nil, errors.New("must have exactly one value")
+	}
+	return v, nil
+}
+
+// ValidateValueLimit TODO
+func ValidateValueLimit(min, max int) TypeHandler {
+	return func(v []string) (interface{}, error) {
+		switch {
+		case min > 0 && len(v) < min:
+			return nil, fmt.Errorf("must have more than %v values (has: %v)", min, len(v))
+		case max > 0 && len(v) > max:
+			return nil, fmt.Errorf("must have fewer than %v values (has: %v)", max, len(v))
+		default:
+			return v, nil
+		}
+	}
+}
+
 // The default handler functions
 // -----------------------------
 
 func handleString(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
 	return strings.Join(v, " "), nil
 }
 
 func handleBool(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
 	r, err := parseBool(v[0])
 	if err != nil {
 		return nil, err
@@ -381,9 +407,6 @@ func handleBool(v []string) (interface{}, error) {
 }
 
 func handleFloat32(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
 	r, err := strconv.ParseFloat(v[0], 32)
 	if err != nil {
 		return nil, err
@@ -391,9 +414,6 @@ func handleFloat32(v []string) (interface{}, error) {
 	return float32(r), nil
 }
 func handleFloat64(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
 	r, err := strconv.ParseFloat(v[0], 64)
 	if err != nil {
 		return nil, err
@@ -402,9 +422,6 @@ func handleFloat64(v []string) (interface{}, error) {
 }
 
 func handleInt64(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
 	r, err := strconv.ParseInt(v[0], 10, 64)
 	if err != nil {
 		return nil, err
@@ -413,9 +430,6 @@ func handleInt64(v []string) (interface{}, error) {
 }
 
 func handleUint64(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
 	r, err := strconv.ParseUint(v[0], 10, 64)
 	if err != nil {
 		return nil, err
