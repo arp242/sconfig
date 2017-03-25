@@ -1,28 +1,37 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-package regexp
+package sconfig
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
-	"regexp"
 	"testing"
-
-	"arp242.net/sconfig"
 )
 
-func TestRegexp(t *testing.T) {
+func TestValidate(t *testing.T) {
 	cases := []struct {
-		fun         sconfig.TypeHandler
+		fun         TypeHandler
 		in          []string
-		expected    interface{}
 		expectedErr error
 	}{
-		{handleRegexp, []string{"a"}, regexp.MustCompile(`a`), nil},
-		{handleRegexp, []string{"[", "A-Z", "]"}, regexp.MustCompile("[A-Z]"), nil},
-		{handleRegexp, []string{"("}, nil, errors.New("error parsing regexp: missing closing ): `(`")},
+		{ValidateNoValue, []string{}, nil},
+		{ValidateNoValue, []string{"1"}, errValidateNoValue},
+		{ValidateNoValue, []string{"asd", "zxa"}, errValidateNoValue},
+
+		{ValidateSingleValue, []string{"qwe"}, nil},
+		{ValidateSingleValue, []string{}, errValidateSingleValue},
+		{ValidateSingleValue, []string{"asd", "zxc"}, errValidateSingleValue},
+
+		{ValidateValueLimit(0, 1), []string{}, nil},
+		{ValidateValueLimit(0, 1), []string{"Asd"}, nil},
+		{ValidateValueLimit(0, 1), []string{"zxc", "asd"}, fmt.Errorf(errValidateValueLimitFewer, 1, 2)},
+
+		{ValidateValueLimit(2, 3), []string{}, fmt.Errorf(errValidateValueLimitMore, 2, 0)},
+		{ValidateValueLimit(2, 3), []string{"ads"}, fmt.Errorf(errValidateValueLimitMore, 2, 1)},
+		{ValidateValueLimit(2, 3), []string{"ads", "asd"}, nil},
+		{ValidateValueLimit(2, 3), []string{"ads", "zxc", "qwe"}, nil},
+		{ValidateValueLimit(2, 3), []string{"ads", "zxc", "qwe", "hjkl"}, fmt.Errorf(errValidateValueLimitFewer, 3, 4)},
 	}
 
 	for i, tc := range cases {
@@ -34,13 +43,13 @@ func TestRegexp(t *testing.T) {
 				if err != nil {
 					t.Errorf("expected err to be nil; is: %#v", err)
 				}
-				if !reflect.DeepEqual(out, tc.expected) {
+				if !reflect.DeepEqual(out, tc.in) {
 					t.Errorf("out wrong\nexpected:  %#v\nout:       %#v\n",
-						tc.expected, out)
+						tc.in, out)
 				}
 			default:
 				if err.Error() != tc.expectedErr.Error() {
-					t.Errorf("err wrong\nexpected:  %v\nout:       %v\n",
+					t.Errorf("err wrong\nexpected:  %#v\nout:       %#v\n",
 						tc.expectedErr, err)
 				}
 

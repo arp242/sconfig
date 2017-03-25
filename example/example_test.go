@@ -23,7 +23,7 @@ type Config struct {
 func TestExample(t *testing.T) {
 	config := Config{}
 	err := sconfig.Parse(&config, "config", sconfig.Handlers{
-		// Customer handler
+		// Custom handler
 		"address": func(line []string) error {
 			addr, err := net.LookupHost(line[0])
 			if err != nil {
@@ -40,5 +40,5 @@ func TestExample(t *testing.T) {
 		t.Fail()
 	}
 
-	fmt.Printf("%#v\n", config)
+	fmt.Printf("%+v\n", config)
 }

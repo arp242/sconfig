@@ -1,3 +1,6 @@
+// Copyright © 2016-2017 Martin Tournoij
+// See the bottom of this file for the full copyright.
+
 package sconfig
 
 import (
@@ -6,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -28,6 +32,54 @@ func testfile(data string) (filename string) {
 	return fp.Name()
 }
 
+func rm(t *testing.T, path string) {
+	err := os.Remove(path)
+	if err != nil {
+		t.Errorf("cannot remove %#v: %v", path, err)
+	}
+}
+
+func rmAll(t *testing.T, path string) {
+	err := os.RemoveAll(path)
+	if err != nil {
+		t.Errorf("cannot remove %#v: %v", path, err)
+	}
+}
+
+func TestRegisterType(t *testing.T) {
+	defer defaultTypeHandlers()
+	didint := false
+	didint64 := false
+	RegisterType("int", func(v []string) (interface{}, error) {
+		didint = true
+		return int(42), nil
+	})
+	RegisterType("int64", func(v []string) (interface{}, error) {
+		didint64 = true
+		return int64(42), nil
+	})
+
+	f := testfile("hello 42\nworld 42")
+	defer rm(t, f)
+
+	c := &struct {
+		Hello int64
+		World int
+	}{}
+
+	err := Parse(c, f, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if didint != true {
+		t.Error("didint was not true")
+	}
+	if didint64 != true {
+		t.Error("didint64 was not true")
+	}
+}
+
 func TestReadFileError(t *testing.T) {
 	// File doesn't exist
 	out, err := readFile("/nonexistent-file")
@@ -40,7 +92,7 @@ func TestReadFileError(t *testing.T) {
 
 	// Sourced file doesn't exist
 	f := testfile("source /nonexistent-file")
-	defer os.Remove(f)
+	defer rm(t, f)
 	out, err = readFile(f)
 	if err == nil {
 		t.Error("no error on sourcing /nonexistent-file")
@@ -51,7 +103,7 @@ func TestReadFileError(t *testing.T) {
 
 	// First line is indented: makes no sense.
 	f2 := testfile(" indented")
-	defer os.Remove(f2)
+	defer rm(t, f2)
 	out, err = readFile(f2)
 	if err == nil {
 		t.Error("no error when first line is indented")
@@ -63,7 +115,7 @@ func TestReadFileError(t *testing.T) {
 
 func TestReadFile(t *testing.T) {
 	source := testfile("sourced file")
-	defer os.Remove(source)
+	defer rm(t, source)
 
 	test := fmt.Sprintf(`
 # A comment
@@ -102,7 +154,7 @@ source %v
 	}
 
 	f := testfile(test)
-	defer os.Remove(f)
+	defer rm(t, f)
 	out, err := readFile(f)
 	if err != nil {
 		t.Errorf("readFile: got err: %v", err)
@@ -138,14 +190,17 @@ func TestFindConfig(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer os.RemoveAll(dir)
+	defer rmAll(t, dir)
 
 	f, err := ioutil.TempFile(dir, "config")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	os.Setenv("XDG_CONFIG", dir)
+	err = os.Setenv("XDG_CONFIG", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	find = FindConfig(filepath.Base(f.Name()))
 	if find != f.Name() {
 		t.Fail()
@@ -171,7 +226,7 @@ type testPrimitives struct {
 func TestMustParse(t *testing.T) {
 	out := testPrimitives{}
 	f := testfile("str okay")
-	defer os.Remove(f)
+	defer rm(t, f)
 	MustParse(&out, f, nil)
 
 	defer func() {
@@ -187,7 +242,7 @@ func TestMustParse(t *testing.T) {
 	}()
 
 	f2 := testfile("not okay")
-	defer os.Remove(f2)
+	defer rm(t, f2)
 	MustParse(&out, f2, nil)
 }
 
@@ -201,6 +256,31 @@ func TestParseError(t *testing.T) {
 	if out != e {
 		t.Error("out isn't empty")
 	}
+
+}
+
+// Make sure we give a sane error
+func TestGetValues(t *testing.T) {
+	out := struct {
+		Foo string
+	}{}
+
+	f := testfile(`foo bar`)
+	defer rm(t, f)
+
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Fatal("Err is nil")
+		}
+
+		switch err.(type) {
+		case *reflect.ValueError:
+			t.Fatal("still reflect.ValueError")
+		}
+
+	}()
+	Parse(out, f, nil)
 }
 
 func TestParsePrimitives(t *testing.T) {
@@ -229,7 +309,7 @@ float64 3.14159
 
 	out := testPrimitives{}
 	f := testfile(test)
-	defer os.Remove(f)
+	defer rm(t, f)
 	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
@@ -258,7 +338,7 @@ func TestInvalidPrimitives(t *testing.T) {
 
 	for test, expected := range tests {
 		f := testfile(test)
-		defer os.Remove(f)
+		defer rm(t, f)
 
 		out := testPrimitives{}
 		err := Parse(&out, f, nil)
@@ -277,7 +357,7 @@ func TestDefaults(t *testing.T) {
 		Str: "default value",
 	}
 	f := testfile("bool on\n")
-	defer os.Remove(f)
+	defer rm(t, f)
 	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
@@ -287,7 +367,7 @@ func TestDefaults(t *testing.T) {
 	}
 
 	f2 := testfile("str changed\n")
-	defer os.Remove(f2)
+	defer rm(t, f2)
 	err = Parse(&out, f2, nil)
 	if err != nil {
 		t.Error(err.Error())
@@ -300,7 +380,7 @@ func TestDefaults(t *testing.T) {
 func TestParseHandlers(t *testing.T) {
 	out := testPrimitives{}
 	f := testfile("bool false\nInt64 42\n")
-	defer os.Remove(f)
+	defer rm(t, f)
 
 	err := Parse(&out, f, Handlers{
 		"Bool": func(line []string) (err error) {
@@ -319,13 +399,13 @@ func TestParseHandlers(t *testing.T) {
 
 	err = Parse(&out, f, Handlers{
 		"Int64": func(line []string) (err error) {
-			return errors.New("Oh noes!")
+			return errors.New("oh noes")
 		},
 	})
 	if err == nil {
 		t.Error("error is nil")
 	}
-	expected := " line 2: error parsing Int64: Oh noes! (from handler)"
+	expected := " line 2: error parsing Int64: oh noes (from handler)"
 	if !strings.HasSuffix(err.Error(), expected) {
 		t.Errorf("\nexpected:  %#v\nout:       %#v\n", expected, err.Error())
 	}
@@ -362,7 +442,7 @@ float64 3.14159 1.2
 
 	out := testArray{}
 	f := testfile(test)
-	defer os.Remove(f)
+	defer rm(t, f)
 	err := Parse(&out, f, nil)
 	if err != nil {
 		t.Error(err.Error())
@@ -390,7 +470,7 @@ func TestInvalidArray(t *testing.T) {
 
 	for test, expected := range tests {
 		f := testfile(test)
-		defer os.Remove(f)
+		defer rm(t, f)
 
 		out := testArray{}
 		err := Parse(&out, f, nil)
@@ -411,74 +491,40 @@ type testTypeHandlers struct {
 	Regs []*regexp.Regexp
 }
 
-/* TODO
-func TestParseTypeHandlers(t *testing.T) {
-	defer defaultTypeHandlers()
+func TestInflect(t *testing.T) {
+	c := &struct {
+		Key    []string
+		Planes []string
+	}{}
 
-	TypeHandlers["string"] = func(v []string) (interface{}, error) {
-		return "type handler", nil
-	}
-	TypeHandlers["*regexp.Regexp"] = func(v []string) (interface{}, error) {
-		return regexp.MustCompile(v[0]), nil
-	}
-	TypeHandlers["[]*regexp.Regexp"] = func(v []string) (interface{}, error) {
-		r := []*regexp.Regexp{}
-		for _, s := range v {
-			r = append(r, regexp.MustCompile(s))
-		}
-		return r, nil
-	}
+	f := testfile("key a\nplanes b\nkeys a\nplane b")
+	defer rm(t, f)
 
-	test := `
-str override this
-
-reg foo.*
-
-regs bar.* [hH]
-	`
-
-	out := testTypeHandlers{}
-	f := testfile(test)
-	defer os.Remove(f)
-	err := Parse(&out, f, nil)
+	err := Parse(c, f, nil)
 	if err != nil {
-		t.Error(err.Error())
+		t.Fatal(err)
 	}
 
-	if out.Str != "type handler" {
-		t.Error()
-	}
-	if out.Reg.String() != "foo.*" {
-		t.Error()
-	}
-	if len(out.Regs) < 2 {
-		t.Error()
-	}
-	if out.Regs[0].String() != "bar.*" {
-		t.Error()
-	}
-	if out.Regs[1].String() != "[hH]" {
-		t.Error()
-	}
-
-	// Just in case...
-	delete(TypeHandlers, "string")
-	err = Parse(&out, f, nil)
-	if err == nil {
-		t.Error("expected an error")
-		t.FailNow()
-	}
-	if !strings.HasSuffix(err.Error(), "don't know how to set fields of the type string") {
-		t.Error("wrong error")
-	}
-
-	f2 := testfile("# Hello\n")
-	defer os.Remove(f2)
-
-	TypeHandlers = nil
-	err = Parse(&out, f2, nil)
-	if err != nil {
-		t.Error(err)
-	}
 }
-*/
+
+// The MIT License (MIT)
+//
+// Copyright © 2016-2017 Martin Tournoij
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// The software is provided "as is", without warranty of any kind, express or
+// implied, including but not limited to the warranties of merchantability,
+// fitness for a particular purpose and noninfringement. In no event shall the
+// authors or copyright holders be liable for any claim, damages or other
+// liability, whether in an action of contract, tort or otherwise, arising
+// from, out of or in connection with the software or the use or other dealings
+// in the software.

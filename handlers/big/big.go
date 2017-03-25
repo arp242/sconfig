@@ -1,31 +1,54 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-// Package time TODO
-package time // import "arp242.net/sconfig/handlers/time"
+// Package big TODO
+package big // import "arp242.net/sconfig/handlers/big"
 
 import (
-	"time"
+	"fmt"
+	"math/big"
+	"strings"
 
 	"arp242.net/sconfig"
 )
 
+var (
+	errHandleInt   = "unable to convert %v to big.Int"
+	errHandleFloat = "unable to convert %v to big.Float"
+	errHandleRat   = "unable to convert %v to big.Rat"
+)
+
 func init() {
-	sconfig.RegisterType("duration", handleDuration)
-	sconfig.RegisterType("location", handleLocation)
-	sconfig.RegisterType("time", handleTime)
+	sconfig.RegisterType("big.Int", sconfig.ValidateSingleValue, handleInt)
+	sconfig.RegisterType("big.Float", sconfig.ValidateSingleValue, handleFloat)
+	sconfig.RegisterType("big.Rat", sconfig.ValidateSingleValue, handleRational)
 }
 
-func handleDuration(v []string) (interface{}, error) {
-	return time.Duration(0), nil
+func handleInt(v []string) (interface{}, error) {
+	n := big.Int{}
+	z, success := n.SetString(strings.Join(v, ""), 10)
+	if !success {
+		return nil, fmt.Errorf(errHandleInt, strings.Join(v, ""))
+	}
+	return z, nil
 }
 
-func handleLocation(v []string) (interface{}, error) {
-	return time.Location{}, nil
+func handleFloat(v []string) (interface{}, error) {
+	n := big.Float{}
+	z, success := n.SetString(strings.Join(v, ""))
+	if !success {
+		return nil, fmt.Errorf(errHandleFloat, strings.Join(v, ""))
+	}
+	return z, nil
 }
 
-func handleTime(v []string) (interface{}, error) {
-	return time.Time{}, nil
+func handleRational(v []string) (interface{}, error) {
+	n := big.Rat{}
+	z, success := n.SetString(strings.Join(v, ""))
+	if !success {
+		return nil, fmt.Errorf(errHandleRat, strings.Join(v, ""))
+	}
+	return z, nil
 }
 
 // The MIT License (MIT)

@@ -1,27 +1,29 @@
+// Copyright © 2016-2017 Martin Tournoij
+// See the bottom of this file for the full copyright.
+
 // Package sconfig is a simple yet functional configuration file parser.
 //
 // See the README.markdown for an introduction.
-package sconfig
+package sconfig // import "arp242.net/sconfig"
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"unicode"
-
-	"bitbucket.org/pkg/inflect"
 )
 
 // TypeHandlers can be used to handle types other than the basic builtin ones;
-// it's also possible to override the default types. The key is the name of the
-// type.
+// it's also possible to override the default types.
+//
+// The key is the name of the type.
 //
 // The TypeHandlers are chained; the return value is passed to the next one. The
-// chain is stopped if one handler returns a non-nil error.
+// chain is stopped if one handler returns a non-nil error. This is particularly
+// useful for validation (see ValidateSingleValue() and ValidateValueLimit() for
+// examples).
 var TypeHandlers = make(map[string][]TypeHandler)
 
 // TypeHandler takes the field to set and the value to set it to. It is expected
@@ -37,28 +39,8 @@ type Handler func([]string) error
 // of the field in the struct.
 type Handlers map[string]Handler
 
-func init() {
-	defaultTypeHandlers()
-}
-
-func defaultTypeHandlers() {
-	TypeHandlers = map[string][]TypeHandler{
-		"string":    {ValidateSingleValue, handleString},
-		"bool":      {ValidateSingleValue, handleBool},
-		"float32":   {ValidateSingleValue, handleFloat32},
-		"float64":   {ValidateSingleValue, handleFloat64},
-		"int64":     {ValidateSingleValue, handleInt64},
-		"uint64":    {ValidateSingleValue, handleUint64},
-		"[]string":  {ValidateValueLimit(1, 0), handleStringSlice},
-		"[]bool":    {ValidateValueLimit(1, 0), handleBoolSlice},
-		"[]float32": {ValidateValueLimit(1, 0), handleFloat32Slice},
-		"[]float64": {ValidateValueLimit(1, 0), handleFloat64Slice},
-		"[]int64":   {ValidateValueLimit(1, 0), handleInt64Slice},
-		"[]uint64":  {ValidateValueLimit(1, 0), handleUint64Slice},
-	}
-}
-
-// RegisterType TODO
+// RegisterType adds one or more TypeHandlers to the list of registered type
+// handlers.
 func RegisterType(typ string, fun ...TypeHandler) {
 	TypeHandlers[typ] = fun
 }
@@ -190,28 +172,26 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 
 // Parse will reads file from disk and populates the given config struct c.
 //
-// The Handlers map can be given to customize the the behaviour; the key is the
-// name of the config struct field, and the function is passed a slice with all
-// the values on the line.
-// There is no return value, the function is epected to set any settings on the
+// The Handlers map can be given to customize the behaviour; the key is the name
+// of the config struct field, and the function is passed a slice with all the
+// values on the line.
+// There is no return value, the function is expected to set any settings on the
 // struct; for example:
 //
-//     MustParse(&config, "config", Handlers{
-//     	"Bool": func(line []string) {
-//     		if line[0] == "yup" {
-//     			config.Bool = true
-//     		}
-//     	},
-//     })
-//
-// TODO: Document more
+//  MustParse(&config, "config", Handlers{
+//      "Bool": func(line []string) {
+//          if line[0] == "yup" {
+//              config.Bool = true
+//          }
+//       },
+//  })
 func Parse(c interface{}, file string, handlers Handlers) error {
 	lines, err := readFile(file)
 	if err != nil {
 		return err
 	}
 
-	values := reflect.ValueOf(c).Elem()
+	values := getValues(c)
 
 	// Get list of rule names from tags
 	for _, line := range lines {
@@ -233,7 +213,7 @@ func Parse(c interface{}, file string, handlers Handlers) error {
 			continue
 		}
 
-		// Set from typehandler
+		// Set from type handler
 		if has, err := setFromTypeHandler(&field, v[1:]); has {
 			if err != nil {
 				return fmterr(file, line[0], v[0], err)
@@ -250,15 +230,34 @@ func Parse(c interface{}, file string, handlers Handlers) error {
 	return nil
 }
 
+func getValues(c interface{}) reflect.Value {
+	// Make sure we give a sane error here when accidentally passing in a
+	// non-pointer, since the default is not all that helpful:
+	//     panic: reflect: call of reflect.Value.Elem on struct Value
+	defer func() {
+		err := recover()
+		if err != nil {
+			switch err.(type) {
+			case *reflect.ValueError:
+				panic(fmt.Errorf(
+					"unable to get values of the config struct (did you pass it as a pointer?): %v",
+					err))
+			default:
+				panic(err)
+			}
+		}
+	}()
+	return reflect.ValueOf(c).Elem()
+}
+
 func fmterr(file, line, key string, err error) error {
 	return fmt.Errorf("%v line %v: error parsing %s: %v",
 		file, line, key, err)
 }
 
 func fieldNameFromKey(key string, values reflect.Value) (string, error) {
-	fieldName := inflect.Camelize(key)
+	fieldName := inflect.camelize(key)
 
-	// TODO: Maybe find better inflect package that deals with this already?
 	// This list is from golint
 	acr := []string{"Api", "Ascii", "Cpu", "Css", "Dns", "Eof", "Guid", "Html",
 		"Https", "Http", "Id", "Ip", "Json", "Lhs", "Qps", "Ram", "Rhs",
@@ -272,7 +271,7 @@ func fieldNameFromKey(key string, values reflect.Value) (string, error) {
 	field := values.FieldByName(fieldName)
 	if !field.CanAddr() {
 		// Check plural version too; we're not too fussy
-		fieldNamePlural := inflect.Pluralize(fieldName)
+		fieldNamePlural := inflect.togglePlural(fieldName)
 		field = values.FieldByName(fieldNamePlural)
 		if !field.CanAddr() {
 			return "", fmt.Errorf("unknown option (field %s or %s is missing)",
@@ -322,17 +321,6 @@ func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
 	return true, nil
 }
 
-func parseBool(v string) (bool, error) {
-	switch strings.ToLower(v) {
-	case "1", "true", "yes", "on", "enable", "enabled":
-		return true, nil
-	case "0", "false", "no", "off", "disable", "disabled":
-		return false, nil
-	default:
-		return false, fmt.Errorf(`unable to parse "%s" as a boolean`, v)
-	}
-}
-
 // FindConfig tries to find a config file at the usual locations (in this
 // order):
 //
@@ -369,141 +357,9 @@ func FindConfig(file string) string {
 	return ""
 }
 
-// ValidateSingleValue TODO
-func ValidateSingleValue(v []string) (interface{}, error) {
-	if len(v) != 1 {
-		return nil, errors.New("must have exactly one value")
-	}
-	return v, nil
-}
-
-// ValidateValueLimit TODO
-func ValidateValueLimit(min, max int) TypeHandler {
-	return func(v []string) (interface{}, error) {
-		switch {
-		case min > 0 && len(v) < min:
-			return nil, fmt.Errorf("must have more than %v values (has: %v)", min, len(v))
-		case max > 0 && len(v) > max:
-			return nil, fmt.Errorf("must have fewer than %v values (has: %v)", max, len(v))
-		default:
-			return v, nil
-		}
-	}
-}
-
-// The default handler functions
-// -----------------------------
-
-func handleString(v []string) (interface{}, error) {
-	return strings.Join(v, " "), nil
-}
-
-func handleBool(v []string) (interface{}, error) {
-	r, err := parseBool(v[0])
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-func handleFloat32(v []string) (interface{}, error) {
-	r, err := strconv.ParseFloat(v[0], 32)
-	if err != nil {
-		return nil, err
-	}
-	return float32(r), nil
-}
-func handleFloat64(v []string) (interface{}, error) {
-	r, err := strconv.ParseFloat(v[0], 64)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-func handleInt64(v []string) (interface{}, error) {
-	r, err := strconv.ParseInt(v[0], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-func handleUint64(v []string) (interface{}, error) {
-	r, err := strconv.ParseUint(v[0], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
-}
-
-func handleStringSlice(v []string) (interface{}, error) {
-	return v, nil
-}
-
-func handleBoolSlice(v []string) (interface{}, error) {
-	a := make([]bool, len(v))
-	for i := range v {
-		r, err := parseBool(v[i])
-		if err != nil {
-			return nil, err
-		}
-		a[i] = r
-	}
-	return a, nil
-}
-
-func handleFloat32Slice(v []string) (interface{}, error) {
-	a := make([]float32, len(v))
-	for i := range v {
-		r, err := strconv.ParseFloat(v[i], 32)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = float32(r)
-	}
-	return a, nil
-}
-
-func handleFloat64Slice(v []string) (interface{}, error) {
-	a := make([]float64, len(v))
-	for i := range v {
-		r, err := strconv.ParseFloat(v[i], 64)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = r
-	}
-	return a, nil
-}
-
-func handleInt64Slice(v []string) (interface{}, error) {
-	a := make([]int64, len(v))
-	for i := range v {
-		r, err := strconv.ParseInt(v[i], 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = r
-	}
-	return a, nil
-}
-
-func handleUint64Slice(v []string) (interface{}, error) {
-	a := make([]uint64, len(v))
-	for i := range v {
-		r, err := strconv.ParseUint(v[i], 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		a[i] = r
-	}
-	return a, nil
-}
-
 // The MIT License (MIT)
 //
-// Copyright © 2016 Martin Tournoij
+// Copyright © 2016-2017 Martin Tournoij
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to

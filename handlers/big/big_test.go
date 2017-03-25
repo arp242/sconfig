@@ -1,28 +1,34 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-package regexp
+package big
 
 import (
-	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
-	"regexp"
 	"testing"
 
 	"arp242.net/sconfig"
 )
 
-func TestRegexp(t *testing.T) {
+func TestMath(t *testing.T) {
 	cases := []struct {
 		fun         sconfig.TypeHandler
 		in          []string
 		expected    interface{}
 		expectedErr error
 	}{
-		{handleRegexp, []string{"a"}, regexp.MustCompile(`a`), nil},
-		{handleRegexp, []string{"[", "A-Z", "]"}, regexp.MustCompile("[A-Z]"), nil},
-		{handleRegexp, []string{"("}, nil, errors.New("error parsing regexp: missing closing ): `(`")},
+		// TODO: test big values to make sure it won't overflow
+		{handleInt, []string{"42"}, big.NewInt(42), nil},
+		{handleInt, []string{"42.1"}, nil, fmt.Errorf(errHandleInt, 42.1)},
+
+		//{handleFloat, []string{"42"}, big.NewFloat(42), nil},
+		//{handleFloat, []string{"42.1"}, big.NewFloat(42.1), nil},
+		//{handleFloat, []string{"4x"}, nil, fmt.Errorf(errHandleFloat, "4x")},
+
+		//{handleInt, []string{"42"}, big.NewRat(42), nil},
+		//{handleInt, []string{"42.1"}, nil, fmt.Errorf(errHandleRat, 42.1)},
 	}
 
 	for i, tc := range cases {

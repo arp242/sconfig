@@ -1,28 +1,44 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-package regexp
+package sconfig
 
 import (
 	"errors"
 	"fmt"
 	"reflect"
-	"regexp"
 	"testing"
-
-	"arp242.net/sconfig"
 )
 
-func TestRegexp(t *testing.T) {
+func TestHandlers(t *testing.T) {
 	cases := []struct {
-		fun         sconfig.TypeHandler
+		fun         TypeHandler
 		in          []string
 		expected    interface{}
 		expectedErr error
 	}{
-		{handleRegexp, []string{"a"}, regexp.MustCompile(`a`), nil},
-		{handleRegexp, []string{"[", "A-Z", "]"}, regexp.MustCompile("[A-Z]"), nil},
-		{handleRegexp, []string{"("}, nil, errors.New("error parsing regexp: missing closing ): `(`")},
+		{handleString, []string{}, "", nil},
+		{handleString, []string{"H€llo"}, "H€llo", nil},
+		{handleString, []string{"Hello", "world!"}, "Hello world!", nil},
+		{handleString, []string{"3.14"}, "3.14", nil},
+
+		{handleBool, []string{"false"}, false, nil},
+		{handleBool, []string{"TRUE"}, true, nil},
+		{handleBool, []string{"enabl", "ed"}, true, nil},
+		{handleBool, []string{}, false, errors.New(`unable to parse "" as a boolean`)},
+		{handleBool, []string{"it is true"}, false, errors.New(`unable to parse "it is true" as a boolean`)},
+
+		{handleFloat32, []string{}, float32(0.0), errors.New(`strconv.ParseFloat: parsing "": invalid syntax`)},
+		{handleFloat32, []string{"0.0"}, float32(0.0), nil},
+		{handleFloat32, []string{".000001"}, float32(0.000001), nil},
+		{handleFloat32, []string{"1"}, float32(1), nil},
+		{handleFloat32, []string{"1.1", "12"}, float32(1.112), nil},
+
+		{handleFloat64, []string{}, float64(0.0), errors.New(`strconv.ParseFloat: parsing "": invalid syntax`)},
+		{handleFloat64, []string{"0.0"}, float64(0.0), nil},
+		{handleFloat64, []string{".000001"}, float64(0.000001), nil},
+		{handleFloat64, []string{"1"}, float64(1), nil},
+		{handleFloat64, []string{"1.1", "12"}, float64(1.112), nil},
 	}
 
 	for i, tc := range cases {
