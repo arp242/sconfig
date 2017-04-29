@@ -17,12 +17,12 @@ func init() {
 
 func defaultTypeHandlers() {
 	typeHandlers = map[string][]TypeHandler{
-		"string":    {ValidateSingleValue, handleString},
-		"bool":      {ValidateSingleValue, handleBool},
-		"float32":   {ValidateSingleValue, handleFloat32},
-		"float64":   {ValidateSingleValue, handleFloat64},
-		"int64":     {ValidateSingleValue, handleInt64},
-		"uint64":    {ValidateSingleValue, handleUint64},
+		"string":    {ValidateSingleValue(), handleString},
+		"bool":      {ValidateSingleValue(), handleBool},
+		"float32":   {ValidateSingleValue(), handleFloat32},
+		"float64":   {ValidateSingleValue(), handleFloat64},
+		"int64":     {ValidateSingleValue(), handleInt64},
+		"uint64":    {ValidateSingleValue(), handleUint64},
 		"[]string":  {ValidateValueLimit(1, 0), handleStringSlice},
 		"[]bool":    {ValidateValueLimit(1, 0), handleBoolSlice},
 		"[]float32": {ValidateValueLimit(1, 0), handleFloat32Slice},

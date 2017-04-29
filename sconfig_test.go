@@ -72,10 +72,10 @@ func TestRegisterType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if didint != true {
+	if !didint {
 		t.Error("didint was not true")
 	}
-	if didint64 != true {
+	if !didint64 {
 		t.Error("didint64 was not true")
 	}
 }
@@ -280,7 +280,7 @@ func TestGetValues(t *testing.T) {
 		}
 
 	}()
-	Parse(out, f, nil)
+	_ = Parse(out, f, nil)
 }
 
 func TestParsePrimitives(t *testing.T) {

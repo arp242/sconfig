@@ -12,10 +12,10 @@ import (
 )
 
 func init() {
-	sconfig.RegisterType("IP", sconfig.ValidateSingleValue, handleIP)
-	sconfig.RegisterType("IPAddr", sconfig.ValidateSingleValue, handleIPAddr)
-	sconfig.RegisterType("IPMask", sconfig.ValidateSingleValue, handleIPMask)
-	sconfig.RegisterType("IPNet", sconfig.ValidateSingleValue, handleIPNet)
+	sconfig.RegisterType("IP", sconfig.ValidateSingleValue(), handleIP)
+	sconfig.RegisterType("IPAddr", sconfig.ValidateSingleValue(), handleIPAddr)
+	sconfig.RegisterType("IPMask", sconfig.ValidateSingleValue(), handleIPMask)
+	sconfig.RegisterType("IPNet", sconfig.ValidateSingleValue(), handleIPNet)
 }
 
 // handleIP parses an IPv4 or IPv6 address

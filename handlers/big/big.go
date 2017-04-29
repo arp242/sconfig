@@ -19,9 +19,9 @@ var (
 )
 
 func init() {
-	sconfig.RegisterType("big.Int", sconfig.ValidateSingleValue, handleInt)
-	sconfig.RegisterType("big.Float", sconfig.ValidateSingleValue, handleFloat)
-	sconfig.RegisterType("big.Rat", sconfig.ValidateSingleValue, handleRational)
+	sconfig.RegisterType("big.Int", sconfig.ValidateSingleValue(), handleInt)
+	sconfig.RegisterType("big.Float", sconfig.ValidateSingleValue(), handleFloat)
+	sconfig.RegisterType("big.Rat", sconfig.ValidateSingleValue(), handleRational)
 }
 
 func handleInt(v []string) (interface{}, error) {

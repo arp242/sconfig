@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"unicode"
@@ -172,28 +173,31 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 	}
 }
 
-// Parse will reads file from disk and populates the given config struct c.
+// Parse will reads file from disk and populates the given config struct.
 //
-// The Handlers map can be given to customize the behaviour; the key is the name
-// of the config struct field, and the function is passed a slice with all the
-// values on the line.
-// There is no return value, the function is expected to set any settings on the
-// struct; for example:
+// The Handlers map can be given to customize the behaviour for individual
+// configuration keys. This will override the type handler (if any).
 //
-//  MustParse(&config, "config", Handlers{
-//      "Bool": func(line []string) {
+// The function is expected to set any settings on the struct; for example:
+//
+//  Parse(&config, "config", Handlers{
+//      "Bool": func(line []string) error {
 //          if line[0] == "yup" {
 //              config.Bool = true
 //          }
+//          return nil
 //       },
 //  })
-func Parse(c interface{}, file string, handlers Handlers) error {
+//
+// Returned errors will abort parsing and set the error as the return value for
+// Parse().
+func Parse(config interface{}, file string, handlers Handlers) error {
 	lines, err := readFile(file)
 	if err != nil {
 		return err
 	}
 
-	values := getValues(c)
+	values := getValues(config)
 
 	// Get list of rule names from tags
 	for _, line := range lines {
@@ -323,23 +327,31 @@ func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
 	return true, nil
 }
 
-// FindConfig tries to find a config file at the usual locations (in this
-// order):
+// FindConfig tries to find a configuration file at the usual locations.
 //
-//   ~/.config/$file
-//   ~/.$file
+// The following paths are checked (in this order):
+//
+//   $XDG_CONFIG/$file
+//   $HOME/.$file
 //   /etc/$file
 //   /usr/local/etc/$file
 //   /usr/pkg/etc/$file
 //   ./$file
+//
+// The default for $XDG_CONFIG if unset is $HOME/.config
 func FindConfig(file string) string {
 	file = strings.TrimLeft(file, "/")
 
 	locations := []string{}
-	if xdg := os.Getenv("XDG_CONFIG"); xdg != "" {
-		locations = append(locations, strings.TrimRight(xdg, "/")+"/"+file)
+	xdg := os.Getenv("XDG_CONFIG")
+	if xdg != "" {
+		locations = append(locations, filepath.Join(xdg, file))
 	}
 	if home := os.Getenv("HOME"); home != "" {
+		if xdg == "" {
+			locations = append(locations, filepath.Join(
+				os.Getenv("HOME"), "/.config/", file))
+		}
 		locations = append(locations, home+"/."+file)
 	}
 

@@ -15,13 +15,13 @@ func TestValidate(t *testing.T) {
 		in          []string
 		expectedErr error
 	}{
-		{ValidateNoValue, []string{}, nil},
-		{ValidateNoValue, []string{"1"}, errValidateNoValue},
-		{ValidateNoValue, []string{"asd", "zxa"}, errValidateNoValue},
+		{ValidateNoValue(), []string{}, nil},
+		{ValidateNoValue(), []string{"1"}, errValidateNoValue},
+		{ValidateNoValue(), []string{"asd", "zxa"}, errValidateNoValue},
 
-		{ValidateSingleValue, []string{"qwe"}, nil},
-		{ValidateSingleValue, []string{}, errValidateSingleValue},
-		{ValidateSingleValue, []string{"asd", "zxc"}, errValidateSingleValue},
+		{ValidateSingleValue(), []string{"qwe"}, nil},
+		{ValidateSingleValue(), []string{}, errValidateSingleValue},
+		{ValidateSingleValue(), []string{"asd", "zxc"}, errValidateSingleValue},
 
 		{ValidateValueLimit(0, 1), []string{}, nil},
 		{ValidateValueLimit(0, 1), []string{"Asd"}, nil},
