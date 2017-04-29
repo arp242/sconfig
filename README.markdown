@@ -8,16 +8,9 @@
 Installing
 ==========
 
-	go get arp242.net/sconfig.1
+	go get arp242.net/sconfig
 
-sconfig uses semantic versioning; the above will use the latest 1.x tag.
-
-You can also use the latest master (`arp242.net/sconfig`) and vendor that,
-preferably with a vendoring tool to lock it to 1.x.
-
-It is *strongly* discouraged to use the latest master without a vendoring it, as
-the author reserves the right to increase the major version and introduce
-breakage as he sees fit.
+Go 1.5 and newer should work, but the test suite only runs with 1.7 and newer.
 
 What does it look like?
 =======================
