@@ -1,9 +1,8 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-// Package regexp contains handlers for parsing values as regular expressions.
-//
-// TODO: Probably want to trim values? so we can use multiline regexp easier?
+// Package regexp contains handlers for parsing values as regular expressions
+// with the regexp package.
 package regexp // import "arp242.net/sconfig/handlers/regexp"
 
 import (

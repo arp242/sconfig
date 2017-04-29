@@ -342,8 +342,7 @@ func (rs *inflectSet) AddSingularExact(suffix, replacement string, exact bool) {
 	rs.singulars = append([]*rule{r}, rs.singulars...)
 }
 
-// Add any inconsistant pluralizing/sinularizing rules
-// to the set here.
+// Add any inconsistent pluralizing/sinularizing rules to the set here.
 func (rs *inflectSet) AddIrregular(singular, plural string) {
 	delete(rs.uncountables, singular)
 	delete(rs.uncountables, plural)
@@ -368,8 +367,9 @@ func (rs *inflectSet) isUncountable(word string) bool {
 }
 
 func splitAtCaseChangeWithTitlecase(s string) []string {
-	words := make([]string, 0)
-	word := make([]rune, 0)
+	words := []string{}
+	word := []rune{}
+
 	for _, c := range s {
 		spacer := isSpacerChar(c)
 		if len(word) > 0 {

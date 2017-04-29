@@ -143,8 +143,8 @@ you can do easily with your own type handler :-)
 Note that the size of `int` and `uint` are platform-dependent, so adding those
 may not be a good idea.
 
-I get a "don’t know how to set fields of the type ..." error if I try to use `sconfig.TypeHandlers`
----------------------------------------------------------------------------------------------------
+I get a "don’t know how to set fields of the type ..." error if I try to add a new type handler
+-----------------------------------------------------------------------------------------------
 Include the package name; even if the type handler is in the same package. Do:
 
 	sconfig.RegisterType("[]main.RecordT", func(v []string) (interface{}, error) {
@@ -152,7 +152,6 @@ Include the package name; even if the type handler is in the same package. Do:
 
 and not:
 
-	sconfig.TypeHandlers["[]RecordT"] = func(v []string) (interface{}, error) {
 	sconfig.RegisterType("[]RecordT", func(v []string) (interface{}, error) {
 	}
 

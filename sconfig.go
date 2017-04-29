@@ -15,16 +15,13 @@ import (
 	"unicode"
 )
 
-// TypeHandlers can be used to handle types other than the basic builtin ones;
-// it's also possible to override the default types.
-//
-// The key is the name of the type.
-//
-// The TypeHandlers are chained; the return value is passed to the next one. The
-// chain is stopped if one handler returns a non-nil error. This is particularly
-// useful for validation (see ValidateSingleValue() and ValidateValueLimit() for
-// examples).
-var TypeHandlers = make(map[string][]TypeHandler)
+var (
+	// typeHandlers are all the registered type handlers.
+	//
+	// The key is the name of the type, the value the list of handler functions
+	// to run.
+	typeHandlers = make(map[string][]TypeHandler)
+)
 
 // TypeHandler takes the field to set and the value to set it to. It is expected
 // to return the value to set it to.
@@ -39,10 +36,15 @@ type Handler func([]string) error
 // of the field in the struct.
 type Handlers map[string]Handler
 
-// RegisterType adds one or more TypeHandlers to the list of registered type
-// handlers.
+// RegisterType sets the type handler functions for a type. Existing handlers
+// are always overridden (it doesn't add to the list!)
+//
+// The handlers are chained; the return value is passed to the next one. The
+// chain is stopped if one handler returns a non-nil error. This is particularly
+// useful for validation (see ValidateSingleValue() and ValidateValueLimit() for
+// examples).
 func RegisterType(typ string, fun ...TypeHandler) {
-	TypeHandlers[typ] = fun
+	typeHandlers[typ] = fun
 }
 
 // readFile will read a file, strip comments, and collapse indents. This also
@@ -302,7 +304,7 @@ func setFromHandler(fieldName string, values []string, handlers Handlers) (bool,
 }
 
 func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
-	handler, has := TypeHandlers[field.Type().String()]
+	handler, has := typeHandlers[field.Type().String()]
 	if !has {
 		return false, nil
 	}

@@ -16,7 +16,7 @@ func init() {
 }
 
 func defaultTypeHandlers() {
-	TypeHandlers = map[string][]TypeHandler{
+	typeHandlers = map[string][]TypeHandler{
 		"string":    {ValidateSingleValue, handleString},
 		"bool":      {ValidateSingleValue, handleBool},
 		"float32":   {ValidateSingleValue, handleFloat32},

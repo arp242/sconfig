@@ -23,6 +23,26 @@ func TestRegexp(t *testing.T) {
 		{handleRegexp, []string{"a"}, regexp.MustCompile(`a`), nil},
 		{handleRegexp, []string{"[", "A-Z", "]"}, regexp.MustCompile("[A-Z]"), nil},
 		{handleRegexp, []string{"("}, nil, errors.New("error parsing regexp: missing closing ): `(`")},
+		{handleRegexp, []string{"[", "a-z", "0-9", "]"}, regexp.MustCompile("[a-z0-9]"), nil},
+
+		{
+			handleRegexpSlice,
+			[]string{"[a-z]", "[0-9]"},
+			[]*regexp.Regexp{regexp.MustCompile("[a-z]"), regexp.MustCompile("[0-9]")},
+			nil,
+		},
+		{
+			handleRegexpSlice,
+			[]string{"[a-z]", "[0-9"},
+			nil,
+			errors.New("error parsing regexp: missing closing ]: `[0-9`"),
+		},
+		{
+			handleRegexpSlice,
+			[]string{"[a-z", "[0-9]"},
+			nil,
+			errors.New("error parsing regexp: missing closing ]: `[a-z`"),
+		},
 	}
 
 	for i, tc := range cases {
