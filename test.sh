@@ -2,10 +2,10 @@
 
 set -euC
 
-echo >| coverage.txt
-
+# Cache some stuff
 go test -race -covermode=atomic -i ./...
 
+echo >| coverage.txt
 for d in $(go list ./...); do
 	go test -race -covermode=atomic -coverprofile=coverage.tmp $d
 	if [ -f coverage.tmp ]; then

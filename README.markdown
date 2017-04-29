@@ -1,7 +1,7 @@
 [![GoDoc](https://godoc.org/arp242.net/sconfig?status.svg)](https://godoc.org/arp242.net/sconfig)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Carpetsmoker/sconfig)](https://goreportcard.com/report/github.com/Carpetsmoker/sconfig)
 [![Build Status](https://travis-ci.org/Carpetsmoker/sconfig.svg?branch=master)](https://travis-ci.org/Carpetsmoker/sconfig)
-[![Coverage Status](https://coveralls.io/repos/github/Carpetsmoker/sconfig/badge.svg?branch=master)](https://coveralls.io/github/Carpetsmoker/sconfig?branch=master)
+[![codecov](https://codecov.io/gh/Carpetsmoker/sconfig/branch/master/graph/badge.svg)](https://codecov.io/gh/Carpetsmoker/sconfig)
 
 `sconfig` is a simple and functional configuration file parser for Go.
 
