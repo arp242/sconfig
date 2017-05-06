@@ -126,6 +126,7 @@ Besides, there are are several libraries that already do a good job at that such
 as
 [validator](https://github.com/go-playground/validator),
 [go-validation](https://github.com/BakedSoftware/go-validation),
+[govalidator](https://github.com/asaskevich/govalidator),
 and others.
 
 Set default values?
