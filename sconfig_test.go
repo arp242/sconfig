@@ -268,19 +268,14 @@ func TestGetValues(t *testing.T) {
 	f := testfile(`foo bar`)
 	defer rm(t, f)
 
-	defer func() {
-		err := recover()
-		if err == nil {
-			t.Fatal("Err is nil")
-		}
-
-		switch err.(type) {
-		case *reflect.ValueError:
-			t.Fatal("still reflect.ValueError")
-		}
-
-	}()
-	_ = Parse(out, f, nil)
+	err := Parse(out, f, nil)
+	if err == nil {
+		t.Fatal("Err is nil")
+	}
+	switch err.(type) {
+	case *reflect.ValueError:
+		t.Fatal("still reflect.ValueError")
+	}
 }
 
 func TestParsePrimitives(t *testing.T) {
@@ -504,7 +499,18 @@ func TestInflect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
 
+// Make sure it doesn't panic.
+func TestWeirdType(t *testing.T) {
+	f := testfile("foo.bar a\nasd.zxc 42\n")
+	defer rm(t, f)
+
+	c := "foo"
+	err := Parse(&c, f, nil)
+	if err == nil {
+		t.Fatal("no err?!")
+	}
 }
 
 // The MIT License (MIT)

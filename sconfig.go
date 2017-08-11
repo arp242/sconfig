@@ -191,7 +191,19 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 //
 // Returned errors will abort parsing and set the error as the return value for
 // Parse().
-func Parse(config interface{}, file string, handlers Handlers) error {
+func Parse(config interface{}, file string, handlers Handlers) (returnErr error) {
+	// Recover from panics; return them as errors!
+	defer func() {
+		if rec := recover(); rec != nil {
+			switch recType := rec.(type) {
+			case error:
+				returnErr = recType
+			default:
+				panic(rec)
+			}
+		}
+	}()
+
 	lines, err := readFile(file)
 	if err != nil {
 		return err
@@ -233,7 +245,7 @@ func Parse(config interface{}, file string, handlers Handlers) error {
 			field.Type().String()))
 	}
 
-	return nil
+	return returnErr // Can be set by defer
 }
 
 func getValues(c interface{}) reflect.Value {
