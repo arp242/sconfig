@@ -173,6 +173,10 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 	}
 }
 
+// DontPanic indicates that Parse should never panic(). It's sometimes useful to
+// disable this when you want a full stack trace.
+var DontPanic = true
+
 // Parse will reads file from disk and populates the given config struct.
 //
 // The Handlers map can be given to customize the behaviour for individual
@@ -193,13 +197,16 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 // Parse().
 func Parse(config interface{}, file string, handlers Handlers) (returnErr error) {
 	// Recover from panics; return them as errors!
+	// TODO: This loses the stack though...
 	defer func() {
-		if rec := recover(); rec != nil {
-			switch recType := rec.(type) {
-			case error:
-				returnErr = recType
-			default:
-				panic(rec)
+		if DontPanic {
+			if rec := recover(); rec != nil {
+				switch recType := rec.(type) {
+				case error:
+					returnErr = recType
+				default:
+					panic(rec)
+				}
 			}
 		}
 	}()
@@ -216,12 +223,31 @@ func Parse(config interface{}, file string, handlers Handlers) (returnErr error)
 		// Split by spaces
 		v := strings.Split(line[1], " ")
 
-		// Infer the field name from the key
-		fieldName, err := fieldNameFromKey(v[0], values)
-		if err != nil {
-			return fmterr(file, line[0], v[0], err)
+		var field reflect.Value
+		var fieldName string
+
+		switch values.Kind() {
+
+		// TODO: Only support map[string][]string atm.
+		case reflect.Map:
+			fieldName = v[0]
+			mapKey := reflect.ValueOf(v[0]).Convert(reflect.TypeOf(fieldName))
+			values.SetMapIndex(mapKey, reflect.ValueOf(v[1:]))
+
+			continue
+
+		case reflect.Struct:
+			// Infer the field name from the key
+			var err error
+			fieldName, err = fieldNameFromKey(v[0], values)
+			if err != nil {
+				return fmterr(file, line[0], v[0], err)
+			}
+			field = values.FieldByName(fieldName)
+
+		default:
+			return fmt.Errorf("unknown type: %v", values.Kind())
 		}
-		field := values.FieldByName(fieldName)
 
 		// Use the handler if it exists
 		if has, err := setFromHandler(fieldName, v[1:], handlers); has {

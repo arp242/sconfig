@@ -513,6 +513,22 @@ func TestWeirdType(t *testing.T) {
 	}
 }
 
+// Make sure it doesn't panic.
+func TestMap(t *testing.T) {
+	f := testfile("foo.bar a\nasd.zxc 42\n")
+	defer rm(t, f)
+
+	c := map[string][]string{}
+	err := Parse(&c, f, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(c["foo.bar"], []string{"a"}) {
+		t.Errorf("wrong output: %#v", c["foo.bar"])
+	}
+}
+
 // The MIT License (MIT)
 //
 // Copyright © 2016-2017 Martin Tournoij
