@@ -280,7 +280,7 @@ func TestGetValues(t *testing.T) {
 
 func TestParsePrimitives(t *testing.T) {
 	test := `
-str foo
+str foo bar
 int64 46
 uint64 51
 bool yes
@@ -291,7 +291,7 @@ float32 3.14
 float64 3.14159
 `
 	expected := testPrimitives{
-		Str:     "foo",
+		Str:     "foo bar",
 		Int64:   46,
 		UInt64:  51,
 		Bool:    true,
@@ -327,8 +327,8 @@ func TestInvalidPrimitives(t *testing.T) {
 		"int64 nope":  `invalid syntax`,
 		"uint64 nope": `invalid syntax`,
 
-		`str two values`: `line 1: error parsing str: must have exactly one value`,
-		`uint64`:         `line 1: error parsing uint64: must have exactly one value`,
+		`int64 1 2`: `line 1: error parsing int64: must have exactly one value`,
+		`uint64`:    `line 1: error parsing uint64: must have exactly one value`,
 	}
 
 	for test, expected := range tests {
@@ -513,8 +513,7 @@ func TestWeirdType(t *testing.T) {
 	}
 }
 
-// Make sure it doesn't panic.
-func TestMap(t *testing.T) {
+func TestMapString(t *testing.T) {
 	f := testfile("foo.bar a\nasd.zxc 42\n")
 	defer rm(t, f)
 
