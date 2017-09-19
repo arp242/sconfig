@@ -419,6 +419,7 @@ type testArray struct {
 func TestParseArray(t *testing.T) {
 	test := `
 str foo bar
+str append this
 int64 46 700
 uint64 51 705
 bool yes no yes
@@ -427,7 +428,7 @@ float64 3.14159 1.2
 `
 
 	expected := testArray{
-		Str:     []string{"foo", "bar"},
+		Str:     []string{"foo", "bar", "append", "this"},
 		Int64:   []int64{46, 700},
 		UInt64:  []uint64{51, 705},
 		Bool:    []bool{true, false, true},

@@ -361,7 +361,12 @@ func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
 			return true, err
 		}
 	}
-	field.Set(reflect.ValueOf(v))
+
+	val := reflect.ValueOf(v)
+	if field.Kind() == reflect.Slice {
+		val = reflect.AppendSlice(*field, val)
+	}
+	field.Set(val)
 	return true, nil
 }
 
