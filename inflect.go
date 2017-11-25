@@ -12,7 +12,6 @@
 package sconfig
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -21,12 +20,12 @@ import (
 // inflectSet is the configuration for the pluralization rules. You can extend
 // the rules with the Add* methods.
 type inflectSet struct {
-	uncountables   map[string]bool
-	plurals        []*rule
-	singulars      []*rule
-	humans         []*rule
-	acronyms       []*rule
-	acronymMatcher *regexp.Regexp
+	uncountables map[string]bool
+	plurals      []*rule
+	singulars    []*rule
+	humans       []*rule
+	//acronyms       []*rule
+	//acronymMatcher *regexp.Regexp
 }
 
 type rule struct {
@@ -51,7 +50,7 @@ func newRuleset() *inflectSet {
 	rs.plurals = make([]*rule, 0)
 	rs.singulars = make([]*rule, 0)
 	rs.humans = make([]*rule, 0)
-	rs.acronyms = make([]*rule, 0)
+	//rs.acronyms = make([]*rule, 0)
 	return rs
 }
 

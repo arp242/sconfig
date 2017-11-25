@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -481,12 +480,6 @@ func TestInvalidArray(t *testing.T) {
 
 }
 
-type testTypeHandlers struct {
-	Str  string
-	Reg  *regexp.Regexp
-	Regs []*regexp.Regexp
-}
-
 func TestInflect(t *testing.T) {
 	c := &struct {
 		Key    []string
@@ -527,6 +520,26 @@ func TestMapString(t *testing.T) {
 	if !reflect.DeepEqual(c["foo.bar"], []string{"a"}) {
 		t.Errorf("wrong output: %#v", c["foo.bar"])
 	}
+}
+
+func TestX(t *testing.T) {
+	f := testfile("hello one two three\nhello foo bar")
+	defer rm(t, f)
+
+	c := struct {
+		Hello []string
+	}{}
+	err := Parse(&c, f, Handlers{
+		"Hello": func(line []string) error {
+			fmt.Printf("%#v\n", line)
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("%#v\n", c)
 }
 
 // The MIT License (MIT)

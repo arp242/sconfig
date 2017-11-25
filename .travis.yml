@@ -1,9 +1,17 @@
 language: go
-go_import_path: arp242.net/sconfig
 go:
   - 1.7.x
   - 1.8.x
   - 1.9.x
-  - master
+go_import_path: arp242.net/sconfig
+notifications:
+  email: false
+cache:
+  directories:
+    - $HOME/gopath/pkg
+install: []
 script:
-  - ./test.sh
+  - cd $HOME/gopath/src/arp242.net/sconfig
+  - ./bin/test
+  - ./bin/coverage
+  - ./bin/lint
