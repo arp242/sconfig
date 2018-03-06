@@ -165,7 +165,7 @@ func collapseWhitespace(line string) string {
 	return nl
 }
 
-// MustParse behaves like Parse, but panics if there is an error.
+// MustParse behaves like Parse(), but panics if there is an error.
 func MustParse(c interface{}, file string, handlers Handlers) {
 	err := Parse(c, file, handlers)
 	if err != nil {
@@ -173,33 +173,35 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 	}
 }
 
-// DontPanic indicates that Parse should never panic(). It's sometimes useful to
-// disable this when you want a full stack trace.
-var DontPanic = true
+// sconfig will intercept panic()s and return them as an error, which is much
+// better for most general usage.
+// For development it might be useful to disable this though.
+var dontPanic = true
 
 // Parse will reads file from disk and populates the given config struct.
 //
-// The Handlers map can be given to customize the behaviour for individual
-// configuration keys. This will override the type handler (if any).
-//
-// The function is expected to set any settings on the struct; for example:
+// The Handlers map, which may be nil, can be given to customize the behaviour
+// for individual configuration keys. This will override the type handler (if
+// any). The function is expected to set any settings on the struct; for
+// example:
 //
 //  Parse(&config, "config", Handlers{
-//      "Bool": func(line []string) error {
-//          if line[0] == "yup" {
+//      "SpecialBool": func(line []string) error {
+//          if line[0] == "yup!" {
 //              config.Bool = true
 //          }
 //          return nil
 //       },
 //  })
 //
-// Returned errors will abort parsing and set the error as the return value for
-// Parse().
+// Will allow you to do:
+//
+//   special-bool yup!
 func Parse(config interface{}, file string, handlers Handlers) (returnErr error) {
 	// Recover from panics; return them as errors!
 	// TODO: This loses the stack though...
 	defer func() {
-		if DontPanic {
+		if dontPanic {
 			if rec := recover(); rec != nil {
 				switch recType := rec.(type) {
 				case error:
@@ -374,14 +376,14 @@ func setFromTypeHandler(field *reflect.Value, value []string) (bool, error) {
 //
 // The following paths are checked (in this order):
 //
-//   $XDG_CONFIG/$file
-//   $HOME/.$file
-//   /etc/$file
-//   /usr/local/etc/$file
-//   /usr/pkg/etc/$file
-//   ./$file
+//   $XDG_CONFIG/<file>
+//   $HOME/.<file>
+//   /etc/<file>
+//   /usr/local/etc/<file>
+//   /usr/pkg/etc/<file>
+//   ./<file>
 //
-// The default for $XDG_CONFIG if unset is $HOME/.config
+// The default for $XDG_CONFIG is $HOME/.config if it's not set.
 func FindConfig(file string) string {
 	file = strings.TrimLeft(file, "/")
 
