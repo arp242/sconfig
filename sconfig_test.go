@@ -542,9 +542,9 @@ func TestX(t *testing.T) {
 	fmt.Printf("%#v\n", c)
 }
 
-func TestFieldNames(t *testing.T) {
+func TestFields(t *testing.T) {
 	c := testPrimitives{Str: "init"}
-	names := FieldNames(&c)
+	names := Fields(&c)
 
 	v, ok := names["Str"]
 	if !ok {

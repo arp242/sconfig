@@ -149,13 +149,13 @@ Just set them before parsing:
 
 Override from the environment/flags/etc.?
 -----------------------------------------
-There is no direct built-in support for that, but there is `FieldNames()` to
+There is no direct built-in support for that, but there is `Fields()` to
 list all the field names. For example:
 
 	c := MyConfig{Foo string}
 	sconfig.Parse(&c, "a-file", nil)
 
-	for name, val := range sconfig.FieldNames(&c) {
+	for name, val := range sconfig.Fields(&c) {
 		if flag[name] != "" {
 			val.SetString(flag[name])
 		}
