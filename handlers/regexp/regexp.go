@@ -1,8 +1,9 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-// Package regexp contains handlers for parsing values as regular expressions
-// with the regexp package.
+// Package regexp contains handlers for parsing values with the regexp package.
+//
+// It currently implements the regexp.Regexp types.
 package regexp // import "arp242.net/sconfig/handlers/regexp"
 
 import (
@@ -13,8 +14,8 @@ import (
 )
 
 func init() {
-	sconfig.RegisterType("[]*regexp.Regexp", handleRegexpSlice)
-	sconfig.RegisterType("*regexp.Regexp", handleRegexp)
+	sconfig.RegisterType("*regexp.Regexp", sconfig.ValidateSingleValue(), handleRegexp)
+	sconfig.RegisterType("[]*regexp.Regexp", sconfig.ValidateValueLimit(1, 0), handleRegexpSlice)
 }
 
 func handleRegexp(v []string) (interface{}, error) {

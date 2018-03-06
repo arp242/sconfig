@@ -1,7 +1,9 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-// Package net TODO
+// Package net contains handlers for parsing values with the net package.
+//
+// It currently implements the net.IP type.
 package net // import "arp242.net/sconfig/handlers/net"
 import (
 	"fmt"
@@ -12,16 +14,13 @@ import (
 )
 
 func init() {
-	sconfig.RegisterType("IP", sconfig.ValidateSingleValue(), handleIP)
-	sconfig.RegisterType("IPAddr", sconfig.ValidateSingleValue(), handleIPAddr)
-	sconfig.RegisterType("IPMask", sconfig.ValidateSingleValue(), handleIPMask)
-	sconfig.RegisterType("IPNet", sconfig.ValidateSingleValue(), handleIPNet)
+	sconfig.RegisterType("net.IP", sconfig.ValidateSingleValue(), handleIP)
+	sconfig.RegisterType("[]net.IP", sconfig.ValidateValueLimit(1, 0), handleIPSlice)
 }
 
 // handleIP parses an IPv4 or IPv6 address
 func handleIP(v []string) (interface{}, error) {
-	IP, IPNet, err := net.ParseCIDR(strings.Join(v, ""))
-	_ = IPNet // TODO: What to do with this?
+	IP, _, err := net.ParseCIDR(strings.Join(v, ""))
 	if err != nil {
 		IP = net.ParseIP(v[0])
 	}
@@ -31,14 +30,16 @@ func handleIP(v []string) (interface{}, error) {
 	return IP, nil
 }
 
-func handleIPAddr(v []string) (interface{}, error) {
-	return nil, nil
-}
-func handleIPMask(v []string) (interface{}, error) {
-	return nil, nil
-}
-func handleIPNet(v []string) (interface{}, error) {
-	return nil, nil
+func handleIPSlice(v []string) (interface{}, error) {
+	a := make([]net.IP, len(v))
+	for i := range v {
+		ip, err := handleIP([]string{v[i]})
+		if err != nil {
+			return nil, err
+		}
+		a[i] = ip.(net.IP)
+	}
+	return a, nil
 }
 
 // The MIT License (MIT)

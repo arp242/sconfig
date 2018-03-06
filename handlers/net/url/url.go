@@ -1,31 +1,43 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-// Package url TODO
+// Package url contains handlers for parsing values with the net/url package.
+//
+// It currently implements the url.URL type. Note Go's url package does not do a
+// lot of validation, and will happily "parse" wildly invalid URLs without
+// returning an error.
 package url // import "arp242.net/sconfig/handlers/net/url"
 
 import (
 	"net/url"
+	"strings"
 
 	"arp242.net/sconfig"
 )
 
 func init() {
-	sconfig.RegisterType("URL", handleURL)
-	sconfig.RegisterType("Userinfo", handleUserinfo)
-	sconfig.RegisterType("Values", handleValues)
+	sconfig.RegisterType("*url.URL", sconfig.ValidateSingleValue(), handleURL)
+	sconfig.RegisterType("[]*url.URL", sconfig.ValidateValueLimit(1, 0), handleURLSlice)
 }
 
 func handleURL(v []string) (interface{}, error) {
-	return url.URL{}, nil
+	u, err := url.Parse(strings.Join(v, ""))
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
-func handleUserinfo(v []string) (interface{}, error) {
-	return url.Userinfo{}, nil
-}
-
-func handleValues(v []string) (interface{}, error) {
-	return url.Values{}, nil
+func handleURLSlice(v []string) (interface{}, error) {
+	a := make([]*url.URL, len(v))
+	for i := range v {
+		u, err := url.Parse(v[i])
+		if err != nil {
+			return nil, err
+		}
+		a[i] = u
+	}
+	return a, nil
 }
 
 // The MIT License (MIT)

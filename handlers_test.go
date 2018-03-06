@@ -44,7 +44,7 @@ func TestHandlers(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
 			out, err := tc.fun(tc.in)
-			if !ErrorContains(err, tc.wantErr) {
+			if !errorContains(err, tc.wantErr) {
 				t.Errorf("err wrong\nwant: %v\nout:  %v\n", tc.wantErr, err)
 			}
 			if !reflect.DeepEqual(out, tc.want) {
@@ -54,12 +54,7 @@ func TestHandlers(t *testing.T) {
 	}
 }
 
-// ErrorContains checks if the error message in out contains the text in
-// want.
-//
-// This is safe when out is nil. Use an empty string for want if you want to
-// test that err is nil.
-func ErrorContains(out error, want string) bool {
+func errorContains(out error, want string) bool {
 	if out == nil {
 		return want == ""
 	}

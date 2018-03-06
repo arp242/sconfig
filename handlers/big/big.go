@@ -1,7 +1,9 @@
 // Copyright © 2016-2017 Martin Tournoij
 // See the bottom of this file for the full copyright.
 
-// Package big TODO
+// Package big contains handlers for parsing values with the math/big package.
+//
+// It currently implements the big.Int and big.Float types.
 package big // import "arp242.net/sconfig/handlers/big"
 
 import (
@@ -15,13 +17,13 @@ import (
 var (
 	errHandleInt   = "unable to convert %v to big.Int"
 	errHandleFloat = "unable to convert %v to big.Float"
-	errHandleRat   = "unable to convert %v to big.Rat"
 )
 
 func init() {
-	sconfig.RegisterType("big.Int", sconfig.ValidateSingleValue(), handleInt)
-	sconfig.RegisterType("big.Float", sconfig.ValidateSingleValue(), handleFloat)
-	sconfig.RegisterType("big.Rat", sconfig.ValidateSingleValue(), handleRational)
+	sconfig.RegisterType("*big.Int", sconfig.ValidateSingleValue(), handleInt)
+	sconfig.RegisterType("*big.Float", sconfig.ValidateSingleValue(), handleFloat)
+	sconfig.RegisterType("[]*big.Int", sconfig.ValidateValueLimit(1, 0), handleIntSlice)
+	sconfig.RegisterType("[]*big.Float", sconfig.ValidateValueLimit(1, 0), handleFloatSlice)
 }
 
 func handleInt(v []string) (interface{}, error) {
@@ -42,13 +44,30 @@ func handleFloat(v []string) (interface{}, error) {
 	return z, nil
 }
 
-func handleRational(v []string) (interface{}, error) {
-	n := big.Rat{}
-	z, success := n.SetString(strings.Join(v, ""))
-	if !success {
-		return nil, fmt.Errorf(errHandleRat, strings.Join(v, ""))
+func handleIntSlice(v []string) (interface{}, error) {
+	a := make([]*big.Int, len(v))
+	for i := range v {
+		a[i] = &big.Int{}
+		z, success := a[i].SetString(v[i], 10)
+		if !success {
+			return nil, fmt.Errorf(errHandleInt, v[i])
+		}
+		a[i] = z
 	}
-	return z, nil
+	return a, nil
+}
+
+func handleFloatSlice(v []string) (interface{}, error) {
+	a := make([]*big.Float, len(v))
+	for i := range v {
+		a[i] = &big.Float{}
+		z, success := a[i].SetString(v[i])
+		if !success {
+			return nil, fmt.Errorf(errHandleFloat, v[i])
+		}
+		a[i] = z
+	}
+	return a, nil
 }
 
 // The MIT License (MIT)
