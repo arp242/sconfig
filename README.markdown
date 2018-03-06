@@ -115,20 +115,22 @@ How do I...
 
 Validate fields?
 ----------------
-TODO: Mention chainable handlers here.
+Handlers can be chained. For example the default handler for `int64` is:
 
-There is no built-in way to do this. You can use `if` statements :-)
+	RegisterType("int64", ValidateSingleValue(), handleInt64)
 
-Maybe I'll add this at a later date, an early (unreleased) version actually had
-tag-based validation, but I removed it as it added a bunch of complexity and I'm
-not at all sure this is a common enough problem that needs solving.
+`ValidateSingleValue()` returns a type handler that will give an error if there
+isn't a single value for this key; for example this is an error:
 
-Besides, there are are several libraries that already do a good job at that such
-as
-[validator](https://github.com/go-playground/validator),
-[go-validation](https://github.com/BakedSoftware/go-validation),
-[govalidator](https://github.com/asaskevich/govalidator),
-and others.
+	foo 42 42
+
+There are several others as well. See `Validate*()` in godoc. You can add more
+complex validation handlers if you want, but in general I would recommend just
+using plain ol' `if` statements.
+
+Adding things such as tag-based validation isn't a goal at this point. I'm not
+at all that sure this is a common enough problem that needs solving, and there
+are already many other packages which do this (no need to reinvent the wheel).
 
 Set default values?
 -------------------
