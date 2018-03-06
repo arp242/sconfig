@@ -3,12 +3,10 @@ go:
   - 1.7.x
   - 1.8.x
   - 1.9.x
+  - 1.10.x
 go_import_path: arp242.net/sconfig
 notifications:
   email: false
-cache:
-  directories:
-    - $HOME/gopath/pkg
 install: []
 script:
   - cd $HOME/gopath/src/arp242.net/sconfig

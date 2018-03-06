@@ -38,49 +38,50 @@ A file like this:
 
 Can be parsed with:
 
-	package main
+```go
+package main
 
-	import (
-		"fmt"
-		"os"
+import (
+	"fmt"
+	"os"
 
-		"arp242.net/sconfig"
+	"arp242.net/sconfig"
 
-		// Types that need imports are in handlers/pkgname
-		_ "arp242.net/sconfig/handlers/regexp"
-	)
+	// Types that need imports are in handlers/pkgname
+	_ "arp242.net/sconfig/handlers/regexp"
+)
 
-	type Config struct {
-		Port    int64
-		BaseURL string
-		Match   []*regexp.Regexp
-		Order   []string
-		Hosts   []string
-		Address string
+type Config struct {
+	Port    int64
+	BaseURL string
+	Match   []*regexp.Regexp
+	Order   []string
+	Hosts   []string
+	Address string
+}
+
+func main() {
+	config := Config{}
+	err := sconfig.Parse(&config, "config", sconfig.Handlers{
+		// Custom handler
+		"address": func(line []string) error {
+			addr, err := net.LookupHost(line[0])
+			if err != nil {
+				return err
+			}
+
+			config.Address = addr[0]
+			return nil
+		},
+	})
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
 	}
 
-	func main() {
-		config := Config{}
-		err := sconfig.Parse(&config, "config", sconfig.Handlers{
-			// Custom handler
-			"address": func(line []string) error {
-				addr, err := net.LookupHost(line[0])
-				if err != nil {
-					return err
-				}
-
-				config.Address = addr[0]
-				return nil
-			},
-		})
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
-		}
-
-		fmt.Printf("%#v\n", config)
-	}
-
+	fmt.Printf("%#v\n", config)
+}
+```
 
 But why not...
 ==============
@@ -115,6 +116,7 @@ How do I...
 Validate fields?
 ----------------
 TODO: Mention chainable handlers here.
+
 There is no built-in way to do this. You can use `if` statements :-)
 
 Maybe I'll add this at a later date, an early (unreleased) version actually had
@@ -203,6 +205,8 @@ The syntax of the file is very simple.
 
 Programs using it
 =================
+- [godocgen](https://github.com/Teamwork/godocgen)
+- [kommentaar](https://github.com/teamwork/kommentaar)
 - [trackwall](https://arp242.net/code/trackwall)
 - [transip-dynamic](https://arp242.net/code/transip-dynamic)
 
