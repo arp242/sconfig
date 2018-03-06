@@ -8,6 +8,7 @@ package sconfig // import "arp242.net/sconfig"
 
 import (
 	"bufio"
+	"encoding"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -178,7 +179,15 @@ func MustParse(c interface{}, file string, handlers Handlers) {
 // For development it might be useful to disable this though.
 var dontPanic = true
 
-// Parse will reads file from disk and populates the given config struct.
+// Parse reads the file from disk and populates the given config struct.
+//
+// A line is matched with a struct field by "camelizing" the first word. For
+// example "key-name" becomes "KeyName". You can also use the plural
+// ("KeyNames") as the field name.
+//
+// sconfig will attempt to set the field from the passed Handlers map (see
+// below), a configured type handler, or the encoding.TextUnmarshaler interface,
+// in that order.
 //
 // The Handlers map, which may be nil, can be given to customize the behaviour
 // for individual configuration keys. This will override the type handler (if
@@ -251,7 +260,7 @@ func Parse(config interface{}, file string, handlers Handlers) (returnErr error)
 			return fmt.Errorf("unknown type: %v", values.Kind())
 		}
 
-		// Use the handler if it exists
+		// Use the handler if it exists.
 		if has, err := setFromHandler(fieldName, v[1:], handlers); has {
 			if err != nil {
 				return fmterr(file, line[0], v[0], err)
@@ -259,8 +268,22 @@ func Parse(config interface{}, file string, handlers Handlers) (returnErr error)
 			continue
 		}
 
-		// Set from type handler
+		// Set from type handler.
 		if has, err := setFromTypeHandler(&field, v[1:]); has {
+			if err != nil {
+				return fmterr(file, line[0], v[0], err)
+			}
+			continue
+		}
+
+		// Set from encoding.TextUnmarshaler.
+		if m, ok := field.Interface().(encoding.TextUnmarshaler); ok {
+			if field.IsNil() {
+				field.Set(reflect.New(field.Type().Elem()))
+				m = field.Interface().(encoding.TextUnmarshaler)
+			}
+
+			err := m.UnmarshalText([]byte(strings.Join(v[1:], " ")))
 			if err != nil {
 				return fmterr(file, line[0], v[0], err)
 			}

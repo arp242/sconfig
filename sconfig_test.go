@@ -560,6 +560,46 @@ func TestFields(t *testing.T) {
 	}
 }
 
+type Marsh struct{ v string }
+
+func (m *Marsh) UnmarshalText(text []byte) error {
+	m.v = string(text)
+	if m.v == "error" {
+		return errors.New("error")
+	}
+	return nil
+}
+
+func TestTextUnmarshaler(t *testing.T) {
+	c := struct{ Field *Marsh }{}
+
+	t.Run("set value", func(t *testing.T) {
+		f := testfile("field !! ??")
+		defer rm(t, f)
+
+		err := Parse(&c, f, nil)
+		if err != nil {
+			t.Fatal("error", err)
+		}
+		if c.Field.v != "!! ??" {
+			t.Errorf("value wrong: %#v", c.Field.v)
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		f := testfile("field error")
+		defer rm(t, f)
+
+		err := Parse(&c, f, nil)
+		if err == nil {
+			t.Fatal("error is nil")
+		}
+		if !strings.Contains(err.Error(), "line 1: error parsing field: error") {
+			t.Errorf("wrong error: %#v", err.Error())
+		}
+	})
+}
+
 // The MIT License (MIT)
 //
 // Copyright © 2016-2017 Martin Tournoij
