@@ -170,6 +170,14 @@ you can do easily with your own type handler :-)
 Note that the size of `int` and `uint` are platform-dependent, so adding those
 may not be a good idea.
 
+Use my own types as config fields?
+----------------------------------
+You have three options:
+
+- Add a type handler with `sconfig.RegisterType()`.
+- Make your type satisfy the `encoding.TextUnmarshaler` interface.
+- Add a `Handler` in `sconfig.Parse()`.
+
 I get a "don’t know how to set fields of the type ..." error if I try to add a new type handler
 -----------------------------------------------------------------------------------------------
 Include the package name; even if the type handler is in the same package. Do:
