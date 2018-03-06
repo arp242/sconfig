@@ -276,6 +276,22 @@ func Parse(config interface{}, file string, handlers Handlers) (returnErr error)
 	return returnErr // Can be set by defer
 }
 
+// FieldNames returns a list of all fields in a struct, the return map key is
+// the name of the field (as it appears in the struct) and the key is the type.
+//
+// This is useful if you want to batch operate on a config struct, for example
+// to override from the environment.
+func FieldNames(config interface{}) map[string]reflect.Value {
+	r := make(map[string]reflect.Value)
+	v := reflect.ValueOf(config).Elem()
+	t := reflect.TypeOf(config).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		r[t.Field(i).Name] = v.Field(i)
+	}
+
+	return r
+}
+
 func getValues(c interface{}) reflect.Value {
 	// Make sure we give a sane error here when accidentally passing in a
 	// non-pointer, since the default is not all that helpful:

@@ -112,6 +112,12 @@ But why not...
   They're both fine, I just don't like the syntax much. Typing all those pesky
   `=` and `"` characters is just so much work man!
 
+- Viper?  
+  [viper](https://github.com/spf13/viper/) is very popular, which I frankly find
+  somewhat surprising. It's large, quite complex, adds a [a lot of
+  dependencies](https://godoc.org/github.com/spf13/viper?import-graph), and IMHO
+  doesn't even work all that well to begin with.
+
 How do I...
 ===========
 
@@ -139,7 +145,21 @@ Set default values?
 Just set them before parsing:
 
 	c := MyConfig{Value: "The default"}
-	sconfig.Parse(&c, "a-file", sconfig.Handlers{})
+	sconfig.Parse(&c, "a-file", nil)
+
+Override from the environment/flags/etc.?
+-----------------------------------------
+There is no direct built-in support for that, but there is `FieldNames()` to
+list all the field names. For example:
+
+	c := MyConfig{Foo string}
+	sconfig.Parse(&c, "a-file", nil)
+
+	for name, val := range sconfig.FieldNames(&c) {
+		if flag[name] != "" {
+			val.SetString(flag[name])
+		}
+	}
 
 Use `int` types? I get an error?
 --------------------------------
@@ -207,18 +227,14 @@ The syntax of the file is very simple.
 - All Lines that start with one or more Whitespace characters will be appended
   to the last Value.
 
-Programs using it
-=================
-- [godocgen](https://github.com/Teamwork/godocgen)
-- [kommentaar](https://github.com/teamwork/kommentaar)
-- [trackwall](https://arp242.net/code/trackwall)
-- [transip-dynamic](https://arp242.net/code/transip-dynamic)
-
 Alternatives
 ============
 Aside from those mentioned in the "But why not..." section above:
 
-- [https://github.com/kovetskiy/ko](https://github.com/kovetskiy/ko)
+- [github.com/kovetskiy/ko](https://github.com/kovetskiy/ko)
+- [github.com/stevenroose/gonfig](https://github.com/stevenroose/gonfig)
+
+Probably others? Open an issue/PR and I'll add it.
 
 [json-no]: http://arp242.net/weblog/JSON_as_configuration_files-_please_dont.html
 [yaml-meh]: http://arp242.net/weblog/yaml_probably_not_so_great_after_all.html

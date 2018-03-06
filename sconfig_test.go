@@ -542,6 +542,24 @@ func TestX(t *testing.T) {
 	fmt.Printf("%#v\n", c)
 }
 
+func TestFieldNames(t *testing.T) {
+	c := testPrimitives{Str: "init"}
+	names := FieldNames(&c)
+
+	v, ok := names["Str"]
+	if !ok {
+		t.Fatalf("Str not in map")
+	}
+	if v.Interface().(string) != "init" {
+		t.Fatalf("Str wrong value")
+	}
+
+	v.SetString("XXX")
+	if v.Interface().(string) != "XXX" {
+		t.Fatalf("Str wrong value")
+	}
+}
+
 // The MIT License (MIT)
 //
 // Copyright © 2016-2017 Martin Tournoij
