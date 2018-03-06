@@ -16,25 +16,27 @@ What does it look like?
 =======================
 A file like this:
 
-	# This is a comment
+```apache
+# This is a comment
 
-	port 8080 # This is also a comment
+port 8080 # This is also a comment
 
-	# Look ma, no quotes!
-	base-url http://example.com
+# Look ma, no quotes!
+base-url http://example.com
 
-	# We'll parse these in a []*regexp.Regexp
-	match ^foo.+
-	match ^b[ao]r
+# We'll parse these in a []*regexp.Regexp
+match ^foo.+
+match ^b[ao]r
 
-	# Two values
-	order allow deny
+# Two values
+order allow deny
 
-	host  # Idented lines are collapsed
-		arp242.net         # My website
-		stackoverflow.com  # I like this too
+host  # Idented lines are collapsed
+	arp242.net         # My website
+	stackoverflow.com  # I like this too
 
-	address arp242.net
+address arp242.net
+```
 
 Can be parsed with:
 
