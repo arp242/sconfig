@@ -4,69 +4,69 @@
 package sconfig
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
 func TestHandlers(t *testing.T) {
 	cases := []struct {
-		fun         TypeHandler
-		in          []string
-		expected    interface{}
-		expectedErr error
+		fun     TypeHandler
+		in      []string
+		want    interface{}
+		wantErr string
 	}{
-		{handleString, []string{}, "", nil},
-		{handleString, []string{"H€llo"}, "H€llo", nil},
-		{handleString, []string{"Hello", "world!"}, "Hello world!", nil},
-		{handleString, []string{"3.14"}, "3.14", nil},
+		{handleString, []string{}, "", ""},
+		{handleString, []string{"H€llo"}, "H€llo", ""},
+		{handleString, []string{"Hello", "world!"}, "Hello world!", ""},
+		{handleString, []string{"3.14"}, "3.14", ""},
 
-		{handleBool, []string{"false"}, false, nil},
-		{handleBool, []string{"TRUE"}, true, nil},
-		{handleBool, []string{"enabl", "ed"}, true, nil},
-		{handleBool, []string{}, false, errors.New(`unable to parse "" as a boolean`)},
-		{handleBool, []string{"it is true"}, false, errors.New(`unable to parse "it is true" as a boolean`)},
+		{handleBool, []string{"false"}, false, ""},
+		{handleBool, []string{"TRUE"}, true, ""},
+		{handleBool, []string{"enabl", "ed"}, true, ""},
+		{handleBool, []string{}, true, ""},
+		{handleBool, []string{"it is true"}, nil, `unable to parse "it is true" as a boolean`},
 
-		{handleFloat32, []string{}, float32(0.0), errors.New(`strconv.ParseFloat: parsing "": invalid syntax`)},
-		{handleFloat32, []string{"0.0"}, float32(0.0), nil},
-		{handleFloat32, []string{".000001"}, float32(0.000001), nil},
-		{handleFloat32, []string{"1"}, float32(1), nil},
-		{handleFloat32, []string{"1.1", "12"}, float32(1.112), nil},
+		{handleFloat32, []string{}, nil, `strconv.ParseFloat: parsing "": invalid syntax`},
+		{handleFloat32, []string{"0.0"}, float32(0.0), ""},
+		{handleFloat32, []string{".000001"}, float32(0.000001), ""},
+		{handleFloat32, []string{"1"}, float32(1), ""},
+		{handleFloat32, []string{"1.1", "12"}, float32(1.112), ""},
 
-		{handleFloat64, []string{}, float64(0.0), errors.New(`strconv.ParseFloat: parsing "": invalid syntax`)},
-		{handleFloat64, []string{"0.0"}, float64(0.0), nil},
-		{handleFloat64, []string{".000001"}, float64(0.000001), nil},
-		{handleFloat64, []string{"1"}, float64(1), nil},
-		{handleFloat64, []string{"1.1", "12"}, float64(1.112), nil},
+		{handleFloat64, []string{}, nil, `strconv.ParseFloat: parsing "": invalid syntax`},
+		{handleFloat64, []string{"0.0"}, float64(0.0), ""},
+		{handleFloat64, []string{".000001"}, float64(0.000001), ""},
+		{handleFloat64, []string{"1"}, float64(1), ""},
+		{handleFloat64, []string{"1.1", "12"}, float64(1.112), ""},
 	}
 
 	for i, tc := range cases {
 		t.Run(fmt.Sprintf("%v", i), func(t *testing.T) {
 			out, err := tc.fun(tc.in)
-
-			switch tc.expectedErr {
-			case nil:
-				if err != nil {
-					t.Errorf("expected err to be nil; is: %#v", err)
-				}
-				if !reflect.DeepEqual(out, tc.expected) {
-					t.Errorf("out wrong\nexpected:  %#v\nout:       %#v\n",
-						tc.expected, out)
-				}
-			default:
-				if err.Error() != tc.expectedErr.Error() {
-					t.Errorf("err wrong\nexpected:  %v\nout:       %v\n",
-						tc.expectedErr, err)
-				}
-
-				if out != nil {
-					t.Errorf("out should be nil if there's an error")
-				}
+			if !ErrorContains(err, tc.wantErr) {
+				t.Errorf("err wrong\nwant: %v\nout:  %v\n", tc.wantErr, err)
 			}
-
+			if !reflect.DeepEqual(out, tc.want) {
+				t.Errorf("\nwant: %#v\nout:  %#v\n", tc.want, out)
+			}
 		})
 	}
+}
+
+// ErrorContains checks if the error message in out contains the text in
+// want.
+//
+// This is safe when out is nil. Use an empty string for want if you want to
+// test that err is nil.
+func ErrorContains(out error, want string) bool {
+	if out == nil {
+		return want == ""
+	}
+	if want == "" {
+		return false
+	}
+	return strings.Contains(out.Error(), want)
 }
 
 // The MIT License (MIT)

@@ -284,7 +284,7 @@ int64 46
 uint64 51
 bool yes
 bool2 true
-bool3 1
+bool3
 bool4 no
 float32 3.14
 float64 3.14159
