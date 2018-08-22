@@ -39,6 +39,10 @@ func TestHandlers(t *testing.T) {
 		{handleFloat64, []string{".000001"}, float64(0.000001), ""},
 		{handleFloat64, []string{"1"}, float64(1), ""},
 		{handleFloat64, []string{"1.1", "12"}, float64(1.112), ""},
+
+		{handleStringMap, []string{"a", "b"}, map[string]string{"a": "b"}, ""},
+		{handleStringMap, []string{"a", "b", "x", "y"}, map[string]string{"a": "b", "x": "y"}, ""},
+		{handleStringMap, []string{"a", "b", "x"}, nil, "uneven number of arguments: 3"},
 	}
 
 	for i, tc := range cases {
