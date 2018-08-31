@@ -1,1 +1,1 @@
-package example
+package example // import "arp242.net/sconfig/example"
