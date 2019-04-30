@@ -6,14 +6,15 @@
 `sconfig` is a simple and functional configuration file parser for Go.
 
 Installing
-==========
+----------
 
 	go get arp242.net/sconfig
 
 Go 1.5 and newer should work, but the test suite only runs with 1.7 and newer.
 
 What does it look like?
-=======================
+-----------------------
+
 A file like this:
 
 ```apache
@@ -76,9 +77,9 @@ func main() {
 			return nil
 		},
 	})
-
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
+        os.Exit(1)
 	}
 
 	fmt.Printf("%#v\n", config)
@@ -86,43 +87,30 @@ func main() {
 ```
 
 But why not...
-==============
-- JSON?  
-  JSON is not at all suitable for configuration files. Also see: [JSON as
-  configuration files: please don’t][json-no].
-- YAML?  
-  I don't like the whitespace significance in config files, and YAML can have
-  some weird behaviour. Also see: [YAML: probably not so great after all][yaml-meh].
-- XML?  
+--------------
 
-		<?xml version="1.0"?>
-		<faq>
-			<header level="2">
-				<content>But why not...</content>
-			</header>
-			<items type="list">
-				<item>
-					<question>XML?</question>
-					<answer type="string" adjective="Very" fullstop="true">funny</answer>
-				</item>
-			</items>
-		</faq>
-
-- INI or TOML?  
+- JSON?<br>
+  JSON is [not intended for configuration files][json].
+- YAML?<br>
+  I don't like the whitespace significance in config files, and [YAML can have
+  some weird behaviour][yaml].
+- XML?<br>
+  It's overly verbose.
+- INI or TOML?<br>
   They're both fine, I just don't like the syntax much. Typing all those pesky
   `=` and `"` characters is just so much work man!
+- Viper?<br>
+  Mostly untyped, quite complex, [a lot of
+  dependencies](https://godoc.org/github.com/spf13/viper?import-graph).
 
-- Viper?  
-  [viper](https://github.com/spf13/viper/) is very popular, which I frankly find
-  somewhat surprising. It's large, quite complex, adds a [a lot of
-  dependencies](https://godoc.org/github.com/spf13/viper?import-graph), and IMHO
-  doesn't even work all that well to begin with.
+Isn't "rolling your own" a bad idea? I don't think so. It's not that hard, and
+the syntax is simple/intuitive enough to be grokable by most people.
 
 How do I...
-===========
+-----------
 
-Validate fields?
-----------------
+### Validate fields?
+
 Handlers can be chained. For example the default handler for `int64` is:
 
 	RegisterType("int64", ValidateSingleValue(), handleInt64)
@@ -140,17 +128,20 @@ Adding things such as tag-based validation isn't a goal at this point. I'm not
 at all that sure this is a common enough problem that needs solving, and there
 are already many other packages which do this (no need to reinvent the wheel).
 
-Set default values?
--------------------
-Just set them before parsing:
+My personal recommendation would be [teamwork/validate][validate], mostly
+because I wrote it ;-)
+
+### Set default values?
+
+Set them before parsing:
 
 	c := MyConfig{Value: "The default"}
 	sconfig.Parse(&c, "a-file", nil)
 
-Override from the environment/flags/etc.?
------------------------------------------
-There is no direct built-in support for that, but there is `Fields()` to
-list all the field names. For example:
+### Override from the environment/flags/etc.?
+
+There is no direct built-in support for that, but there is `Fields()` to list
+all the field names. For example:
 
 	c := MyConfig{Foo string}
 	sconfig.Parse(&c, "a-file", nil)
@@ -161,25 +152,25 @@ list all the field names. For example:
 		}
 	}
 
-Use `int` types? I get an error?
---------------------------------
+### Use `int` types? I get an error?
+
 Only `int64` and `uint64` are handled by default; this should be fine for almost
 all use cases of this package. If you want to add any of the other (u)int types
-you can do easily with your own type handler :-)
+you can do easily with your own type handler.
 
 Note that the size of `int` and `uint` are platform-dependent, so adding those
 may not be a good idea.
 
-Use my own types as config fields?
-----------------------------------
+### Use my own types as config fields?
+
 You have three options:
 
 - Add a type handler with `sconfig.RegisterType()`.
 - Make your type satisfy the `encoding.TextUnmarshaler` interface.
 - Add a `Handler` in `sconfig.Parse()`.
 
-I get a "don’t know how to set fields of the type ..." error if I try to add a new type handler
------------------------------------------------------------------------------------------------
+### I get a "don’t know how to set fields of the type ..." error if I try to add a new type handler
+
 Include the package name; even if the type handler is in the same package. Do:
 
 	sconfig.RegisterType("[]main.RecordT", func(v []string) (interface{}, error) {
@@ -192,20 +183,20 @@ and not:
 
 Replace `main` with the appropriate package name.
 
-
 Syntax
-======
+------
+
 The syntax of the file is very simple.
 
 ### Definitions
 
-- Whitespace: any Unicode whitespace.
-- Hash: `#` character (U+0023).
-- Backslash: `\` character (U+005C).
-- Space: ` ` character (U+0020).
-- NULL byte: U+0000.
+- Whitespace: any Unicode whitespace ("Separator, Space"/Zs category).
+- Hash: `#` (U+0023).
+- Backslash: `\` (U+005C).
+- Space: a space (U+0020).
+- NULL: U+0000.
 - Newline: LF (U+000A) or CR+LF (U+000D, U+000A).
-- Line: Any set of characters ended by a Newline
+- Line: Any set of characters ending with a Newline
 
 ### Reading the file
 
@@ -214,7 +205,7 @@ The syntax of the file is very simple.
 - Everything after the first Hash is considered to be a comment and will be
   ignored unless a Hash is immediately preceded by a Backslash.
 
-- All Whitespace is collapsed to a single space unless a Whitespace character is
+- All Whitespace is collapsed to a single Space unless a Whitespace character is
   preceded by a Backslash.
 
 - Any Backslash immediately preceded by a Backslash will be treated as a single
@@ -233,10 +224,11 @@ The syntax of the file is very simple.
 	- The Value is optional.
 
 - All Lines that start with one or more Whitespace characters will be appended
-  to the last Value.
+  to the last Value (even if there are blank lines or comments in between).
 
 Alternatives
-============
+------------
+
 Aside from those mentioned in the "But why not..." section above:
 
 - [github.com/kovetskiy/ko](https://github.com/kovetskiy/ko)
@@ -244,5 +236,8 @@ Aside from those mentioned in the "But why not..." section above:
 
 Probably others? Open an issue/PR and I'll add it.
 
-[json-no]: http://arp242.net/weblog/JSON_as_configuration_files-_please_dont.html
-[yaml-meh]: http://arp242.net/weblog/yaml_probably_not_so_great_after_all.html
+
+[json]: http://arp242.net/weblog/JSON_as_configuration_files-_please_dont.html
+[yaml]: http://arp242.net/weblog/yaml_probably_not_so_great_after_all.html
+[validate]: https://github.com/teamwork/validate
+
