@@ -128,8 +128,8 @@ Adding things such as tag-based validation isn't a goal at this point. I'm not
 at all that sure this is a common enough problem that needs solving, and there
 are already many other packages which do this (no need to reinvent the wheel).
 
-My personal recommendation would be [teamwork/validate][validate], mostly
-because I wrote it ;-)
+My personal recommendation would be [zvalidate][zvalidate], mostly because I
+wrote it ;-)
 
 ### Set default values?
 
@@ -237,7 +237,7 @@ Aside from those mentioned in the "But why not..." section above:
 Probably others? Open an issue/PR and I'll add it.
 
 
-[json]: http://arp242.net/weblog/JSON_as_configuration_files-_please_dont.html
-[yaml]: http://arp242.net/weblog/yaml_probably_not_so_great_after_all.html
-[validate]: https://github.com/teamwork/validate
+[json]: http://www.arp242.net/json-config.html
+[yaml]: http://www.arp242.net/yaml-config.html
+[zvalidate]: https://github.com/zgoat/zvalidate
 
