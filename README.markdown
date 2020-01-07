@@ -5,10 +5,7 @@
 
 `sconfig` is a simple and functional configuration file parser for Go.
 
-Installing
-----------
-
-	go get arp242.net/sconfig
+Import as `arp242.net/sconfig`.
 
 Go 1.5 and newer should work, but the test suite only runs with 1.7 and newer.
 
@@ -33,8 +30,8 @@ match ^b[ao]r
 order allow deny
 
 host  # Idented lines are collapsed
-	arp242.net         # My website
-	stackoverflow.com  # I like this too
+    arp242.net         # My website
+    stackoverflow.com  # I like this too
 
 address arp242.net
 ```
@@ -45,44 +42,44 @@ Can be parsed with:
 package main
 
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	"arp242.net/sconfig"
+    "arp242.net/sconfig"
 
-	// Types that need imports are in handlers/pkgname
-	_ "arp242.net/sconfig/handlers/regexp"
+    // Types that need imports are in handlers/pkgname
+    _ "arp242.net/sconfig/handlers/regexp"
 )
 
 type Config struct {
-	Port    int64
-	BaseURL string
-	Match   []*regexp.Regexp
-	Order   []string
-	Hosts   []string
-	Address string
+    Port    int64
+    BaseURL string
+    Match   []*regexp.Regexp
+    Order   []string
+    Hosts   []string
+    Address string
 }
 
 func main() {
-	config := Config{}
-	err := sconfig.Parse(&config, "config", sconfig.Handlers{
-		// Custom handler
-		"address": func(line []string) error {
-			addr, err := net.LookupHost(line[0])
-			if err != nil {
-				return err
-			}
+    config := Config{}
+    err := sconfig.Parse(&config, "config", sconfig.Handlers{
+        // Custom handler
+        "address": func(line []string) error {
+            addr, err := net.LookupHost(line[0])
+            if err != nil {
+                return err
+            }
 
-			config.Address = addr[0]
-			return nil
-		},
-	})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
+            config.Address = addr[0]
+            return nil
+        },
+    })
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
         os.Exit(1)
-	}
+    }
 
-	fmt.Printf("%#v\n", config)
+    fmt.Printf("%#v\n", config)
 }
 ```
 
@@ -113,12 +110,12 @@ How do I...
 
 Handlers can be chained. For example the default handler for `int64` is:
 
-	RegisterType("int64", ValidateSingleValue(), handleInt64)
+    RegisterType("int64", ValidateSingleValue(), handleInt64)
 
 `ValidateSingleValue()` returns a type handler that will give an error if there
 isn't a single value for this key; for example this is an error:
 
-	foo 42 42
+    foo 42 42
 
 There are several others as well. See `Validate*()` in godoc. You can add more
 complex validation handlers if you want, but in general I would recommend just
@@ -135,22 +132,22 @@ wrote it ;-)
 
 Set them before parsing:
 
-	c := MyConfig{Value: "The default"}
-	sconfig.Parse(&c, "a-file", nil)
+    c := MyConfig{Value: "The default"}
+    sconfig.Parse(&c, "a-file", nil)
 
-### Override from the environment/flags/etc.?
+    ### Override from the environment/flags/etc.?
 
-There is no direct built-in support for that, but there is `Fields()` to list
-all the field names. For example:
+    There is no direct built-in support for that, but there is `Fields()` to list
+    all the field names. For example:
 
-	c := MyConfig{Foo string}
-	sconfig.Parse(&c, "a-file", nil)
+    c := MyConfig{Foo string}
+    sconfig.Parse(&c, "a-file", nil)
 
-	for name, val := range sconfig.Fields(&c) {
-		if flag[name] != "" {
-			val.SetString(flag[name])
-		}
-	}
+    for name, val := range sconfig.Fields(&c) {
+        if flag[name] != "" {
+            val.SetString(flag[name])
+        }
+    }
 
 ### Use `int` types? I get an error?
 
@@ -173,13 +170,11 @@ You have three options:
 
 Include the package name; even if the type handler is in the same package. Do:
 
-	sconfig.RegisterType("[]main.RecordT", func(v []string) (interface{}, error) {
-	}
+    sconfig.RegisterType("[]main.RecordT", func(v []string) (interface{}, error) { .. }
 
 and not:
 
-	sconfig.RegisterType("[]RecordT", func(v []string) (interface{}, error) {
-	}
+    sconfig.RegisterType("[]RecordT", func(v []string) (interface{}, error) { .. }
 
 Replace `main` with the appropriate package name.
 
@@ -216,12 +211,12 @@ The syntax of the file is very simple.
 
 - Anything before the first Whitespace is considered the Key.
 
-	- Any character except Whitespace and NULL bytes are allowed in the Key.
+  - Any character except Whitespace and NULL bytes are allowed in the Key.
 
 - Anything after the first Whitespace is considered the Value.
 
-	- Any character except NULL bytes are allowed in the Value.
-	- The Value is optional.
+  - Any character except NULL bytes are allowed in the Value.
+  - The Value is optional.
 
 - All Lines that start with one or more Whitespace characters will be appended
   to the last Value (even if there are blank lines or comments in between).
