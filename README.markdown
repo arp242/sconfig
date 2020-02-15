@@ -1,5 +1,5 @@
 [![This project is considered stable](https://img.shields.io/badge/Status-stable-green.svg)](https://arp242.net/status/stable)
-[![GoDoc](https://godoc.org/arp242.net/sconfig?status.svg)](https://godoc.org/arp242.net/sconfig)
+[![GoDoc](https://godoc.org/arp242.net/sconfig?status.svg)](https://pkg.go.dev/arp242.net/sconfig)
 [![Build Status](https://travis-ci.org/arp242/sconfig.svg?branch=master)](https://travis-ci.org/arp242/sconfig)
 [![codecov](https://codecov.io/gh/arp242/sconfig/branch/master/graph/badge.svg)](https://codecov.io/gh/arp242/sconfig)
 
