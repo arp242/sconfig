@@ -18,7 +18,7 @@ type Config struct {
 	Address string
 }
 
-func ExampleMain() {
+func Example() {
 	config := Config{}
 	err := sconfig.Parse(&config, "example.config", sconfig.Handlers{
 		// Custom handler
