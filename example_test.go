@@ -1,11 +1,9 @@
-package example
+package sconfig_test
 
 import (
 	"fmt"
 	"net"
-	"os"
 	"regexp"
-	"testing"
 
 	"arp242.net/sconfig"
 	_ "arp242.net/sconfig/handlers/regexp"
@@ -20,9 +18,9 @@ type Config struct {
 	Address string
 }
 
-func TestExample(t *testing.T) {
+func ExampleMain() {
 	config := Config{}
-	err := sconfig.Parse(&config, "config", sconfig.Handlers{
+	err := sconfig.Parse(&config, "example.config", sconfig.Handlers{
 		// Custom handler
 		"address": func(line []string) error {
 			addr, err := net.LookupHost(line[0])
@@ -34,11 +32,11 @@ func TestExample(t *testing.T) {
 			return nil
 		},
 	})
-
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing config: %v", err)
-		t.Fail()
+		panic(fmt.Errorf("error parsing config: %s", err))
 	}
 
 	fmt.Printf("%+v\n", config)
+
+	// Output: {Port:8080 BaseURL:http://example.com Match:[^foo.+ ^b[ao]r] Order:[allow deny] Hosts:[arp242.net goatcounter.com] Address:arp242.net}
 }

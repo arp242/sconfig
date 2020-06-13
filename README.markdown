@@ -31,7 +31,7 @@ order allow deny
 
 host  # Idented lines are collapsed
     arp242.net         # My website
-    stackoverflow.com  # I like this too
+    goatcounter.com    # My other website
 
 address arp242.net
 ```
@@ -82,6 +82,17 @@ func main() {
     fmt.Printf("%#v\n", config)
 }
 ```
+
+Will result in:
+
+    example.Config{
+        Port:    8080,
+        BaseURL: "http://example.com",
+        Match:   []*regexp.Regexp{[..], [..]},
+        Order:   []string{"allow", "deny"},
+        Hosts:   []string{"arp242.net", "goatcounter.com"},
+        Address: "arp242.net",
+    }
 
 But why not...
 --------------
@@ -185,11 +196,8 @@ The syntax of the file is very simple.
 
 ### Definitions
 
-- Whitespace: any Unicode whitespace ("Separator, Space"/Zs category).
-- Hash: `#` (U+0023).
-- Backslash: `\` (U+005C).
-- Space: a space (U+0020).
-- NULL: U+0000.
+- Whitespace: any Unicode whitespace (Zs or "Separator, Space" category).
+- Hash: `#` (U+0023), Backslash: `\` (U+005C), Space: a space (U+0020), NULL: U+0000
 - Newline: LF (U+000A) or CR+LF (U+000D, U+000A).
 - Line: Any set of characters ending with a Newline
 
@@ -212,6 +220,8 @@ The syntax of the file is very simple.
 - Anything before the first Whitespace is considered the Key.
 
   - Any character except Whitespace and NULL bytes are allowed in the Key.
+  - The special Key `source` can be used to include other config files. The
+    Value for this must be a path. 
 
 - Anything after the first Whitespace is considered the Value.
 
@@ -219,7 +229,8 @@ The syntax of the file is very simple.
   - The Value is optional.
 
 - All Lines that start with one or more Whitespace characters will be appended
-  to the last Value (even if there are blank lines or comments in between).
+  to the last Value, even if there are blank lines or comments in between. The
+  leading whitespace will be removed.
 
 Alternatives
 ------------
