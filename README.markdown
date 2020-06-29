@@ -146,10 +146,10 @@ Set them before parsing:
     c := MyConfig{Value: "The default"}
     sconfig.Parse(&c, "a-file", nil)
 
-    ### Override from the environment/flags/etc.?
+### Override from the environment/flags/etc.?
 
-    There is no direct built-in support for that, but there is `Fields()` to list
-    all the field names. For example:
+There is no direct built-in support for that, but there is `Fields()` to list
+all the field names. For example:
 
     c := MyConfig{Foo string}
     sconfig.Parse(&c, "a-file", nil)
@@ -165,6 +165,8 @@ Set them before parsing:
 Only `int64` and `uint64` are handled by default; this should be fine for almost
 all use cases of this package. If you want to add any of the other (u)int types
 you can do easily with your own type handler.
+
+"lol, no generics", or something, I guess.
 
 Note that the size of `int` and `uint` are platform-dependent, so adding those
 may not be a good idea.
