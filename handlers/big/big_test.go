@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"arp242.net/sconfig"
+	"zgo.at/sconfig"
 )
 
 func TestMath(t *testing.T) {

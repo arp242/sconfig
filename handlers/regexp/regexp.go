@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"arp242.net/sconfig"
+	"zgo.at/sconfig"
 )
 
 func init() {

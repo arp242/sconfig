@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"arp242.net/sconfig"
+	"zgo.at/sconfig"
 )
 
 var (

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"arp242.net/sconfig"
+	"zgo.at/sconfig"
 )
 
 func TestTemplate(t *testing.T) {

@@ -1,3 +1,3 @@
-module arp242.net/sconfig
+module zgo.at/sconfig
 
-go 1.12
+go 1.13

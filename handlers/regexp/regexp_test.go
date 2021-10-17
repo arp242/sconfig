@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"testing"
 
-	"arp242.net/sconfig"
+	"zgo.at/sconfig"
 )
 
 func TestRegexp(t *testing.T) {

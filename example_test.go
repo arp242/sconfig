@@ -5,8 +5,8 @@ import (
 	"net"
 	"regexp"
 
-	"arp242.net/sconfig"
-	_ "arp242.net/sconfig/handlers/regexp"
+	"zgo.at/sconfig"
+	_ "zgo.at/sconfig/handlers/regexp"
 )
 
 type Config struct {

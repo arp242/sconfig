@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"arp242.net/sconfig"
+	"zgo.at/sconfig"
 )
 
 func TestURL(t *testing.T) {

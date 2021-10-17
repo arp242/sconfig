@@ -1,11 +1,6 @@
-[![This project is considered stable](https://img.shields.io/badge/Status-stable-green.svg)](https://arp242.net/status/stable)
-[![GoDoc](https://godoc.org/arp242.net/sconfig?status.svg)](https://pkg.go.dev/arp242.net/sconfig)
-[![Build Status](https://travis-ci.org/arp242/sconfig.svg?branch=master)](https://travis-ci.org/arp242/sconfig)
-[![codecov](https://codecov.io/gh/arp242/sconfig/branch/master/graph/badge.svg)](https://codecov.io/gh/arp242/sconfig)
-
 `sconfig` is a simple and functional configuration file parser for Go.
 
-Import as `arp242.net/sconfig`.
+Import as `zgo.at/sconfig`; API docs: https://godocs.io/zgo.at/sconfig
 
 Go 1.5 and newer should work, but the test suite only runs with 1.7 and newer.
 
