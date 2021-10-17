@@ -40,10 +40,10 @@ import (
     "fmt"
     "os"
 
-    "arp242.net/sconfig"
+    "zgo.at/sconfig"
 
     // Types that need imports are in handlers/pkgname
-    _ "arp242.net/sconfig/handlers/regexp"
+    _ "zgo.at/sconfig/handlers/regexp"
 )
 
 type Config struct {
@@ -242,5 +242,5 @@ Probably others? Open an issue/PR and I'll add it.
 
 [json]: http://www.arp242.net/json-config.html
 [yaml]: http://www.arp242.net/yaml-config.html
-[zvalidate]: https://github.com/zgoat/zvalidate
+[zvalidate]: https://github.com/arp242/zvalidate
 
